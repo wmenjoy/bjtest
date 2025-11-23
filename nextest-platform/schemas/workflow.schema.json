@@ -1,0 +1,100 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://nextest.platform/schemas/workflow.schema.json",
+  "title": "Workflow Definition",
+  "description": "Schema for NextTest Platform Workflow definition",
+  "type": "object",
+  "required": ["workflowId", "name", "version", "definition"],
+  "properties": {
+    "workflowId": {
+      "type": "string",
+      "description": "Unique identifier for the workflow",
+      "pattern": "^[a-zA-Z0-9_-]+$"
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable name of the workflow",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "version": {
+      "type": "string",
+      "description": "Version of the workflow (semver recommended)",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of what this workflow does"
+    },
+    "definition": {
+      "$ref": "#/definitions/workflowDefinition"
+    }
+  },
+  "definitions": {
+    "workflowDefinition": {
+      "type": "object",
+      "required": ["name", "version", "steps"],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "variables": {
+          "type": "object",
+          "description": "Workflow-level variables",
+          "additionalProperties": true
+        },
+        "steps": {
+          "type": "object",
+          "description": "Workflow steps",
+          "minProperties": 1,
+          "additionalProperties": {
+            "$ref": "#/definitions/step"
+          }
+        }
+      }
+    },
+    "step": {
+      "type": "object",
+      "required": ["id", "name", "type", "config"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique step identifier",
+          "pattern": "^[a-zA-Z0-9_]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable step name"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["http", "database", "script", "assert", "test-case"],
+          "description": "Type of action to perform"
+        },
+        "dependsOn": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of step IDs this step depends on"
+        },
+        "onError": {
+          "type": "string",
+          "enum": ["abort", "continue"],
+          "default": "abort",
+          "description": "What to do when this step fails"
+        },
+        "config": {
+          "type": "object",
+          "description": "Step-specific configuration"
+        }
+      }
+    }
+  }
+}
