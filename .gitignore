@@ -1,0 +1,152 @@
+# Backend (Go) - nextest-platform/
+nextest-platform/bin/
+nextest-platform/dist/
+nextest-platform/*.exe
+nextest-platform/*.dll
+nextest-platform/*.so
+nextest-platform/*.dylib
+
+# Go build cache
+nextest-platform/.cache/
+nextest-platform/vendor/
+
+# Go test coverage
+nextest-platform/*.out
+nextest-platform/*.coverprofile
+
+# IDE - VS Code
+nextest-platform/.vscode/
+.vscode/
+
+# IDE - GoLand/IntelliJ
+nextest-platform/.idea/
+nextest-platform/*.iml
+nextest-platform/*.iws
+nextest-platform/*.ipr
+
+# IDE - Sublime
+nextest-platform/*.sublime-project
+nextest-platform/*.sublime-workspace
+
+# OS
+nextest-platform/.DS_Store
+.DS_Store
+nextest-platform/Thumbs.db
+
+# Database files
+nextest-platform/*.db
+nextest-platform/*.sqlite
+nextest-platform/*.sqlite3
+nextest-platform/data/
+nextest-platform/test-management.db
+
+# Logs
+nextest-platform/*.log
+nextest-platform/logs/
+
+# Temporary files
+nextest-platform/tmp/
+nextest-platform/*.tmp
+nextest-platform/temp/
+
+# Build artifacts
+nextest-platform/server
+nextest-platform/import-tool
+nextest-platform/test-service
+nextest-platform/test-service-old
+
+# Configuration - local overrides
+nextest-platform/config.local.toml
+nextest-platform/.env.local
+
+# Test results
+nextest-platform/test-results/
+nextest-platform/*.test
+
+# Frontend (React) - NextTestPlatformUI/
+NextTestPlatformUI/node_modules/
+NextTestPlatformUI/dist/
+NextTestPlatformUI/build/
+NextTestPlatformUI/.vite/
+
+# Frontend - npm/pnpm
+NextTestPlatformUI/package-lock.json
+NextTestPlatformUI/npm-debug.log*
+NextTestPlatformUI/yarn-error.log*
+NextTestPlatformUI/pnpm-debug.log*
+
+# Frontend - IDE
+NextTestPlatformUI/.vscode/
+NextTestPlatformUI/.idea/
+NextTestPlatformUI/*.iml
+
+# Frontend - OS
+NextTestPlatformUI/.DS_Store
+NextTestPlatformUI/Thumbs.db
+
+# Frontend - Environment
+NextTestPlatformUI/.env.local
+NextTestPlatformUI/.env.*.local
+
+# Frontend - Build output
+NextTestPlatformUI/dist/
+NextTestPlatformUI/build/
+
+# Frontend - Testing
+NextTestPlatformUI/coverage/
+NextTestPlatformUI/.nyc_output/
+
+# Root level
+.DS_Store
+*.log
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# OS
+Thumbs.db
+.AppleDouble
+.LSOverride
+
+# Temporary files
+*.tmp
+*.temp
+/tmp/
+/temp/
+
+# Build artifacts
+/dist/
+/build/
+/bin/
+
+# Dependencies
+vendor/
+node_modules/
+
+# Test coverage
+*.coverprofile
+coverage/
+.nyc_output/
+
+# Local development
+.env
+.env.local
+.env.*.local
+config.local.toml
+
+# Misc
+*.pem
+*.key
+*.crt

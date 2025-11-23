@@ -1,0 +1,136 @@
+{
+  "workflowId": "self-test-results-api",
+  "name": "Test Results API Test",
+  "version": "1.0.0",
+  "description": "Tests Test Results and Test Runs API endpoints",
+  "definition": {
+    "name": "Test Results API Test",
+    "version": "1.0.0",
+    "description": "Tests results, runs, and history endpoints",
+    "variables": {
+      "baseUrl": "http://localhost:8090/api",
+      "dbPath": "./data/test_management.db"
+    },
+    "steps": {
+      "step01_getResultFromDB": {
+        "id": "step01_getResultFromDB",
+        "name": "Get Result ID from DB",
+        "type": "database",
+        "config": {
+          "driver": "sqlite3",
+          "dsn": "{{dbPath}}",
+          "queryType": "select",
+          "query": "SELECT id, test_id, status FROM test_results ORDER BY id DESC LIMIT 1",
+          "args": []
+        }
+      },
+      "step02_assertHaveResult": {
+        "id": "step02_assertHaveResult",
+        "name": "Assert Have Result Data",
+        "type": "assert",
+        "dependsOn": ["step01_getResultFromDB"],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step01_getResultFromDB.success}}",
+              "expected": true,
+              "message": "DB query should succeed"
+            }
+          ]
+        }
+      },
+      "step03_getResult": {
+        "id": "step03_getResult",
+        "name": "Get Test Result",
+        "type": "http",
+        "dependsOn": ["step02_assertHaveResult"],
+        "config": {
+          "method": "GET",
+          "url": "{{baseUrl}}/results/{{step01_getResultFromDB.rows[0].id}}"
+        }
+      },
+      "step04_assertResult": {
+        "id": "step04_assertResult",
+        "name": "Assert Result Retrieved",
+        "type": "assert",
+        "dependsOn": ["step03_getResult"],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step03_getResult.response.statusCode}}",
+              "expected": 200,
+              "message": "Get result should return 200"
+            }
+          ]
+        }
+      },
+      "step05_listRuns": {
+        "id": "step05_listRuns",
+        "name": "List Test Runs",
+        "type": "http",
+        "dependsOn": ["step04_assertResult"],
+        "config": {
+          "method": "GET",
+          "url": "{{baseUrl}}/runs"
+        }
+      },
+      "step06_assertRunsList": {
+        "id": "step06_assertRunsList",
+        "name": "Assert Runs List",
+        "type": "assert",
+        "dependsOn": ["step05_listRuns"],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step05_listRuns.response.statusCode}}",
+              "expected": 200,
+              "message": "List runs should return 200"
+            }
+          ]
+        }
+      },
+      "step07_getTestIdFromResult": {
+        "id": "step07_getTestIdFromResult",
+        "name": "Get Test ID from Result",
+        "type": "database",
+        "dependsOn": ["step06_assertRunsList"],
+        "config": {
+          "driver": "sqlite3",
+          "dsn": "{{dbPath}}",
+          "queryType": "select",
+          "query": "SELECT DISTINCT test_id FROM test_results WHERE test_id IS NOT NULL AND test_id != '' LIMIT 1",
+          "args": []
+        }
+      },
+      "step08_getTestHistory": {
+        "id": "step08_getTestHistory",
+        "name": "Get Test History",
+        "type": "http",
+        "dependsOn": ["step07_getTestIdFromResult"],
+        "config": {
+          "method": "GET",
+          "url": "{{baseUrl}}/tests/{{step07_getTestIdFromResult.rows[0].test_id}}/history"
+        }
+      },
+      "step09_assertHistory": {
+        "id": "step09_assertHistory",
+        "name": "Assert History Retrieved",
+        "type": "assert",
+        "dependsOn": ["step08_getTestHistory"],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step08_getTestHistory.response.statusCode}}",
+              "expected": 200,
+              "message": "Get history should return 200"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

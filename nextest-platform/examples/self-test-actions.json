@@ -1,0 +1,154 @@
+{
+  "workflowId": "action-feature-test-v1",
+  "name": "Action Feature Test",
+  "version": "1.0.0",
+  "description": "Test Database, Script, and Assert actions",
+  "definition": {
+    "name": "Action Feature Test",
+    "version": "1.0.0",
+    "description": "Test Database, Script, and Assert actions",
+    "variables": {
+      "dbPath": "./data/test_management.db",
+      "testValue": 42,
+      "testString": "Hello World"
+    },
+    "steps": {
+      "step01_databaseRead": {
+        "id": "step01_databaseRead",
+        "name": "Test Database Read Action",
+        "type": "database",
+        "config": {
+          "driver": "sqlite3",
+          "dsn": "{{dbPath}}",
+          "queryType": "select",
+          "query": "SELECT COUNT(*) as count FROM test_cases WHERE deleted_at IS NULL"
+        }
+      },
+      "step02_assertDBResult": {
+        "id": "step02_assertDBResult",
+        "name": "Assert Database Query Result",
+        "type": "assert",
+        "dependsOn": ["step01_databaseRead"],
+        "config": {
+          "assertions": [
+            {
+              "type": "exists",
+              "actual": "{{step01_databaseRead.rows}}",
+              "message": "Database query should return rows"
+            },
+            {
+              "type": "greaterThanOrEqual",
+              "actual": "{{step01_databaseRead.rows[0].count}}",
+              "expected": 0,
+              "message": "Count should be >= 0"
+            }
+          ]
+        }
+      },
+      "step03_pythonScript": {
+        "id": "step03_pythonScript",
+        "name": "Test Python Script Action",
+        "type": "script",
+        "dependsOn": ["step02_assertDBResult"],
+        "config": {
+          "language": "python",
+          "script": "import json\n\ntest_value = context.get('testValue', 0)\ntest_string = context.get('testString', '')\ndb_result = context.get('step01_databaseRead', {})\ndb_count = 0\nif 'rows' in db_result and len(db_result['rows']) > 0:\n    db_count = db_result['rows'][0].get('count', 0)\n\nresult = {\n    'doubled_value': test_value * 2,\n    'upper_string': test_string.upper(),\n    'db_count': db_count,\n    'script_type': 'python'\n}\n\nprint(json.dumps(result))",
+          "timeout": 10
+        }
+      },
+      "step04_assertPython": {
+        "id": "step04_assertPython",
+        "name": "Assert Python Script Output",
+        "type": "assert",
+        "dependsOn": ["step03_pythonScript"],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step03_pythonScript.output.doubled_value}}",
+              "expected": 84,
+              "message": "Doubled value should be 84"
+            },
+            {
+              "type": "equals",
+              "actual": "{{step03_pythonScript.output.upper_string}}",
+              "expected": "HELLO WORLD",
+              "message": "String should be uppercase"
+            }
+          ]
+        }
+      },
+      "step05_shellScript": {
+        "id": "step05_shellScript",
+        "name": "Test Shell Script Action",
+        "type": "script",
+        "dependsOn": ["step04_assertPython"],
+        "config": {
+          "language": "shell",
+          "script": "echo '{\"hostname\": \"'$(hostname)'\", \"date\": \"'$(date +%Y-%m-%d)'\", \"script_type\": \"shell\"}'",
+          "timeout": 10
+        }
+      },
+      "step06_assertShell": {
+        "id": "step06_assertShell",
+        "name": "Assert Shell Script Output",
+        "type": "assert",
+        "dependsOn": ["step05_shellScript"],
+        "config": {
+          "assertions": [
+            {
+              "type": "exists",
+              "actual": "{{step05_shellScript.output.hostname}}",
+              "message": "Hostname should exist"
+            },
+            {
+              "type": "equals",
+              "actual": "{{step05_shellScript.output.script_type}}",
+              "expected": "shell",
+              "message": "Script type should be shell"
+            }
+          ]
+        }
+      },
+      "step07_complexAssertions": {
+        "id": "step07_complexAssertions",
+        "name": "Test Complex Assertions",
+        "type": "assert",
+        "dependsOn": ["step06_assertShell"],
+        "config": {
+          "assertions": [
+            {
+              "type": "greaterThan",
+              "actual": "{{testValue}}",
+              "expected": 40,
+              "message": "testValue should be > 40"
+            },
+            {
+              "type": "lessThan",
+              "actual": "{{testValue}}",
+              "expected": 50,
+              "message": "testValue should be < 50"
+            },
+            {
+              "type": "contains",
+              "actual": "{{testString}}",
+              "expected": "World",
+              "message": "testString should contain 'World'"
+            }
+          ]
+        }
+      },
+      "step08_finalSummary": {
+        "id": "step08_finalSummary",
+        "name": "Generate Test Summary",
+        "type": "script",
+        "dependsOn": ["step07_complexAssertions"],
+        "config": {
+          "language": "python",
+          "script": "import json\nimport datetime\n\nresult = {\n    'test_name': 'Action Feature Test',\n    'completed_at': datetime.datetime.now().isoformat(),\n    'actions_tested': ['database', 'script-python', 'script-shell', 'assert'],\n    'all_passed': True\n}\n\nprint(json.dumps(result))",
+          "timeout": 10
+        }
+      }
+    }
+  }
+}

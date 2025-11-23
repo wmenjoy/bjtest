@@ -1,0 +1,279 @@
+{
+  "workflowId": "self-test-workflow-execution-api",
+  "name": "Workflow Execution API Test",
+  "version": "1.0.0",
+  "description": "Tests Workflow Execution API endpoints",
+  "definition": {
+    "name": "Workflow Execution API Test",
+    "version": "1.0.0",
+    "description": "Tests workflow execution, run details, steps, and logs endpoints",
+    "variables": {
+      "baseUrl": "http://localhost:8090/api",
+      "dbPath": "./data/test_management.db",
+      "testWorkflowId": "test-simple-workflow"
+    },
+    "steps": {
+      "step01_cleanupWorkflow": {
+        "id": "step01_cleanupWorkflow",
+        "name": "Cleanup Old Workflow",
+        "type": "database",
+        "onError": "continue",
+        "config": {
+          "driver": "sqlite3",
+          "dsn": "{{dbPath}}",
+          "queryType": "exec",
+          "query": "DELETE FROM workflows WHERE workflow_id = ?",
+          "args": ["{{testWorkflowId}}"]
+        }
+      },
+      "step02_createSimpleWorkflow": {
+        "id": "step02_createSimpleWorkflow",
+        "name": "Create Simple Test Workflow",
+        "type": "http",
+        "dependsOn": ["step01_cleanupWorkflow"],
+        "config": {
+          "method": "POST",
+          "url": "{{baseUrl}}/workflows",
+          "headers": {"Content-Type": "application/json"},
+          "body": {
+            "workflowId": "{{testWorkflowId}}",
+            "name": "Simple Test Workflow",
+            "version": "1.0.0",
+            "description": "A simple workflow for testing execution API",
+            "definition": {
+              "name": "Simple Test Workflow",
+              "version": "1.0.0",
+              "description": "Simple workflow",
+              "variables": {
+                "testVar": "hello"
+              },
+              "steps": {
+                "step1": {
+                  "id": "step1",
+                  "name": "Echo Test",
+                  "type": "script",
+                  "config": {
+                    "language": "shell",
+                    "script": "echo 'Test Step 1: {{testVar}}'"
+                  }
+                },
+                "step2": {
+                  "id": "step2",
+                  "name": "Assert Step",
+                  "type": "assert",
+                  "dependsOn": ["step1"],
+                  "config": {
+                    "assertions": [
+                      {
+                        "type": "equals",
+                        "actual": "{{step1.success}}",
+                        "expected": true,
+                        "message": "Step 1 should succeed"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "step03_assertWorkflowCreated": {
+        "id": "step03_assertWorkflowCreated",
+        "name": "Assert Workflow Created",
+        "type": "assert",
+        "dependsOn": ["step02_createSimpleWorkflow"],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step02_createSimpleWorkflow.response.statusCode}}",
+              "expected": 201,
+              "message": "Create workflow should return 201"
+            }
+          ]
+        }
+      },
+      "step04_executeWorkflow": {
+        "id": "step04_executeWorkflow",
+        "name": "Execute Workflow",
+        "type": "http",
+        "dependsOn": ["step03_assertWorkflowCreated"],
+        "config": {
+          "method": "POST",
+          "url": "{{baseUrl}}/workflows/{{testWorkflowId}}/execute",
+          "headers": {"Content-Type": "application/json"}
+        }
+      },
+      "step05_assertExecuted": {
+        "id": "step05_assertExecuted",
+        "name": "Assert Workflow Executed",
+        "type": "assert",
+        "dependsOn": ["step04_executeWorkflow"],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step04_executeWorkflow.response.statusCode}}",
+              "expected": 200,
+              "message": "Execute should return 200"
+            },
+            {
+              "type": "equals",
+              "actual": "{{step04_executeWorkflow.response.body.status}}",
+              "expected": "success",
+              "message": "Workflow should succeed"
+            },
+            {
+              "type": "exists",
+              "actual": "{{step04_executeWorkflow.response.body.runId}}",
+              "message": "RunId should exist"
+            }
+          ]
+        }
+      },
+      "step06_getWorkflowRun": {
+        "id": "step06_getWorkflowRun",
+        "name": "Get Workflow Run",
+        "type": "http",
+        "dependsOn": ["step05_assertExecuted"],
+        "config": {
+          "method": "GET",
+          "url": "{{baseUrl}}/workflows/runs/{{step04_executeWorkflow.response.body.runId}}"
+        }
+      },
+      "step07_assertRunDetails": {
+        "id": "step07_assertRunDetails",
+        "name": "Assert Run Details",
+        "type": "assert",
+        "dependsOn": ["step06_getWorkflowRun"],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step06_getWorkflowRun.response.statusCode}}",
+              "expected": 200,
+              "message": "Get run should return 200"
+            },
+            {
+              "type": "equals",
+              "actual": "{{step06_getWorkflowRun.response.body.status}}",
+              "expected": "success",
+              "message": "Run status should be success"
+            },
+            {
+              "type": "equals",
+              "actual": "{{step06_getWorkflowRun.response.body.workflowId}}",
+              "expected": "{{testWorkflowId}}",
+              "message": "WorkflowId should match"
+            }
+          ]
+        }
+      },
+      "step08_getStepExecutions": {
+        "id": "step08_getStepExecutions",
+        "name": "Get Step Executions",
+        "type": "http",
+        "dependsOn": ["step07_assertRunDetails"],
+        "config": {
+          "method": "GET",
+          "url": "{{baseUrl}}/workflows/runs/{{step04_executeWorkflow.response.body.runId}}/steps"
+        }
+      },
+      "step09_assertStepExecutions": {
+        "id": "step09_assertStepExecutions",
+        "name": "Assert Step Executions",
+        "type": "assert",
+        "dependsOn": ["step08_getStepExecutions"],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step08_getStepExecutions.response.statusCode}}",
+              "expected": 200,
+              "message": "Get steps should return 200"
+            }
+          ]
+        }
+      },
+      "step10_getStepLogs": {
+        "id": "step10_getStepLogs",
+        "name": "Get Step Logs",
+        "type": "http",
+        "dependsOn": ["step09_assertStepExecutions"],
+        "config": {
+          "method": "GET",
+          "url": "{{baseUrl}}/workflows/runs/{{step04_executeWorkflow.response.body.runId}}/logs"
+        }
+      },
+      "step11_assertLogs": {
+        "id": "step11_assertLogs",
+        "name": "Assert Logs Retrieved",
+        "type": "assert",
+        "dependsOn": ["step10_getStepLogs"],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step10_getStepLogs.response.statusCode}}",
+              "expected": 200,
+              "message": "Get logs should return 200"
+            }
+          ]
+        }
+      },
+      "step12_listWorkflowRuns": {
+        "id": "step12_listWorkflowRuns",
+        "name": "List Workflow Runs",
+        "type": "http",
+        "dependsOn": ["step11_assertLogs"],
+        "config": {
+          "method": "GET",
+          "url": "{{baseUrl}}/workflows/{{testWorkflowId}}/runs"
+        }
+      },
+      "step13_assertRunsList": {
+        "id": "step13_assertRunsList",
+        "name": "Assert Runs List",
+        "type": "assert",
+        "dependsOn": ["step12_listWorkflowRuns"],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step12_listWorkflowRuns.response.statusCode}}",
+              "expected": 200,
+              "message": "List runs should return 200"
+            }
+          ]
+        }
+      },
+      "step14_deleteWorkflow": {
+        "id": "step14_deleteWorkflow",
+        "name": "Delete Test Workflow",
+        "type": "http",
+        "dependsOn": ["step13_assertRunsList"],
+        "config": {
+          "method": "DELETE",
+          "url": "{{baseUrl}}/workflows/{{testWorkflowId}}"
+        }
+      },
+      "step15_assertDeleted": {
+        "id": "step15_assertDeleted",
+        "name": "Assert Workflow Deleted",
+        "type": "assert",
+        "dependsOn": ["step14_deleteWorkflow"],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step14_deleteWorkflow.response.statusCode}}",
+              "expected": 200,
+              "message": "Delete should return 200"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

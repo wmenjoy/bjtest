@@ -1,0 +1,76 @@
+{
+  "workflowId": "self-test-workflow",
+  "name": "Basic Workflow Self-Test",
+  "version": "1.0.0",
+  "description": "Simple workflow test for basic operations",
+  "definition": {
+    "variables": {
+      "baseUrl": "http://localhost:8090/api",
+      "testGroupId": "workflow-test-group"
+    },
+    "steps": {
+      "step01_cleanup": {
+        "id": "step01_cleanup",
+        "name": "Cleanup existing group",
+        "type": "http",
+        "config": {
+          "method": "DELETE",
+          "url": "{{baseUrl}}/groups/{{testGroupId}}"
+        },
+        "onError": "continue"
+      },
+      "step02_create": {
+        "id": "step02_create",
+        "name": "Create Test Group",
+        "type": "http",
+        "dependsOn": ["step01_cleanup"],
+        "config": {
+          "method": "POST",
+          "url": "{{baseUrl}}/groups",
+          "headers": {"Content-Type": "application/json"},
+          "body": {
+            "groupId": "{{testGroupId}}",
+            "name": "Workflow Test Group"
+          }
+        }
+      },
+      "step03_verify": {
+        "id": "step03_verify",
+        "name": "Verify Group Created",
+        "type": "http",
+        "dependsOn": ["step02_create"],
+        "config": {
+          "method": "GET",
+          "url": "{{baseUrl}}/groups/{{testGroupId}}"
+        }
+      },
+      "step04_assert": {
+        "id": "step04_assert",
+        "name": "Assert Group Exists",
+        "type": "assert",
+        "dependsOn": ["step03_verify"],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step03_verify.response.statusCode}}",
+              "expected": 200,
+              "message": "GET should return 200 for existing group"
+            }
+          ]
+        }
+      },
+      "step05_cleanup": {
+        "id": "step05_cleanup",
+        "name": "Cleanup Test Group",
+        "type": "http",
+        "dependsOn": ["step04_assert"],
+        "config": {
+          "method": "DELETE",
+          "url": "{{baseUrl}}/groups/{{testGroupId}}"
+        },
+        "onError": "continue"
+      }
+    }
+  }
+}

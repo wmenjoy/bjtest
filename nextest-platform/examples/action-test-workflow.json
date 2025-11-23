@@ -1,0 +1,225 @@
+{
+  "name": "Action Feature Test",
+  "version": "1.0.0",
+  "description": "Test Database, Script, and Assert actions",
+  "variables": {
+    "dbPath": "./data/test_management.db",
+    "testValue": 42,
+    "testString": "Hello World"
+  },
+  "steps": {
+    "testDatabaseRead": {
+      "id": "testDatabaseRead",
+      "name": "Test Database Read Action",
+      "type": "database",
+      "config": {
+        "driver": "sqlite3",
+        "dsn": "{{dbPath}}",
+        "queryType": "select",
+        "query": "SELECT COUNT(*) as count FROM test_cases WHERE deleted_at IS NULL"
+      },
+      "output": {
+        "testCaseCount": "rows[0].count"
+      }
+    },
+
+    "assertDatabaseResult": {
+      "id": "assertDatabaseResult",
+      "name": "Assert Database Query Result",
+      "type": "assert",
+      "dependsOn": ["testDatabaseRead"],
+      "config": {
+        "assertions": [
+          {
+            "type": "exists",
+            "actual": "{{testDatabaseRead.rows}}",
+            "message": "Database query should return rows"
+          },
+          {
+            "type": "greaterThanOrEqual",
+            "actual": "{{testDatabaseRead.rows[0].count}}",
+            "expected": 0,
+            "message": "Count should be >= 0"
+          }
+        ]
+      }
+    },
+
+    "testPythonScript": {
+      "id": "testPythonScript",
+      "name": "Test Python Script Action",
+      "type": "script",
+      "dependsOn": ["assertDatabaseResult"],
+      "config": {
+        "language": "python",
+        "script": "import json\nimport sys\n\n# Access context variables\ntest_value = context.get('testValue', 0)\ntest_string = context.get('testString', '')\ndb_count = context.get('testDatabaseRead', {}).get('rows', [{}])[0].get('count', 0)\n\nresult = {\n    'doubled_value': test_value * 2,\n    'upper_string': test_string.upper(),\n    'db_count': db_count,\n    'script_type': 'python'\n}\n\nprint(json.dumps(result))",
+        "timeout": 10
+      },
+      "output": {
+        "pythonResult": "output"
+      }
+    },
+
+    "assertPythonResult": {
+      "id": "assertPythonResult",
+      "name": "Assert Python Script Output",
+      "type": "assert",
+      "dependsOn": ["testPythonScript"],
+      "config": {
+        "assertions": [
+          {
+            "type": "equals",
+            "actual": "{{testPythonScript.output.doubled_value}}",
+            "expected": 84,
+            "message": "Doubled value should be 84"
+          },
+          {
+            "type": "equals",
+            "actual": "{{testPythonScript.output.upper_string}}",
+            "expected": "HELLO WORLD",
+            "message": "String should be uppercase"
+          },
+          {
+            "type": "equals",
+            "actual": "{{testPythonScript.output.script_type}}",
+            "expected": "python",
+            "message": "Script type should be python"
+          }
+        ]
+      }
+    },
+
+    "testJavaScriptScript": {
+      "id": "testJavaScriptScript",
+      "name": "Test JavaScript Script Action",
+      "type": "script",
+      "dependsOn": ["assertPythonResult"],
+      "config": {
+        "language": "javascript",
+        "script": "const testValue = context.testValue || 0;\nconst testString = context.testString || '';\n\nconst result = {\n    tripled_value: testValue * 3,\n    lower_string: testString.toLowerCase(),\n    script_type: 'javascript'\n};\n\nconsole.log(JSON.stringify(result));",
+        "timeout": 10
+      },
+      "output": {
+        "jsResult": "output"
+      }
+    },
+
+    "assertJavaScriptResult": {
+      "id": "assertJavaScriptResult",
+      "name": "Assert JavaScript Script Output",
+      "type": "assert",
+      "dependsOn": ["testJavaScriptScript"],
+      "config": {
+        "assertions": [
+          {
+            "type": "equals",
+            "actual": "{{testJavaScriptScript.output.tripled_value}}",
+            "expected": 126,
+            "message": "Tripled value should be 126"
+          },
+          {
+            "type": "equals",
+            "actual": "{{testJavaScriptScript.output.lower_string}}",
+            "expected": "hello world",
+            "message": "String should be lowercase"
+          }
+        ]
+      }
+    },
+
+    "testShellScript": {
+      "id": "testShellScript",
+      "name": "Test Shell Script Action",
+      "type": "script",
+      "dependsOn": ["assertJavaScriptResult"],
+      "config": {
+        "language": "shell",
+        "script": "#!/bin/bash\necho '{\"hostname\": \"'$(hostname)'\", \"date\": \"'$(date +%Y-%m-%d)'\", \"script_type\": \"shell\"}'",
+        "timeout": 10
+      },
+      "output": {
+        "shellResult": "output"
+      }
+    },
+
+    "assertShellResult": {
+      "id": "assertShellResult",
+      "name": "Assert Shell Script Output",
+      "type": "assert",
+      "dependsOn": ["testShellScript"],
+      "config": {
+        "assertions": [
+          {
+            "type": "exists",
+            "actual": "{{testShellScript.output.hostname}}",
+            "message": "Hostname should exist"
+          },
+          {
+            "type": "exists",
+            "actual": "{{testShellScript.output.date}}",
+            "message": "Date should exist"
+          },
+          {
+            "type": "equals",
+            "actual": "{{testShellScript.output.script_type}}",
+            "expected": "shell",
+            "message": "Script type should be shell"
+          }
+        ]
+      }
+    },
+
+    "testComplexAssertions": {
+      "id": "testComplexAssertions",
+      "name": "Test Complex Assertions",
+      "type": "assert",
+      "dependsOn": ["assertShellResult"],
+      "config": {
+        "assertions": [
+          {
+            "type": "greaterThan",
+            "actual": "{{testValue}}",
+            "expected": 40,
+            "message": "testValue should be > 40"
+          },
+          {
+            "type": "lessThan",
+            "actual": "{{testValue}}",
+            "expected": 50,
+            "message": "testValue should be < 50"
+          },
+          {
+            "type": "contains",
+            "actual": "{{testString}}",
+            "expected": "World",
+            "message": "testString should contain 'World'"
+          },
+          {
+            "type": "regex",
+            "actual": "{{testString}}",
+            "expected": "^Hello.*$",
+            "message": "testString should match regex"
+          },
+          {
+            "type": "typeof",
+            "actual": "{{testValue}}",
+            "expected": "int",
+            "message": "testValue should be an integer"
+          }
+        ]
+      }
+    },
+
+    "finalSummary": {
+      "id": "finalSummary",
+      "name": "Generate Test Summary",
+      "type": "script",
+      "dependsOn": ["testComplexAssertions"],
+      "config": {
+        "language": "python",
+        "script": "import json\nimport datetime\n\nresult = {\n    'test_name': 'Action Feature Test',\n    'completed_at': datetime.datetime.now().isoformat(),\n    'actions_tested': ['database', 'script-python', 'script-javascript', 'script-shell', 'assert'],\n    'all_passed': True\n}\n\nprint(json.dumps(result, indent=2))",
+        "timeout": 10
+      }
+    }
+  }
+}
