@@ -31,13 +31,15 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [autocompleteItems, setAutocompleteItems] = useState<string[]>([]);
   const [cursorPosition, setCursorPosition] = useState(0);
+  const [showMoreOperators, setShowMoreOperators] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<HTMLDivElement>(null);
+  const moreOperatorsRef = useRef<HTMLDivElement>(null);
 
   // Get variable names for autocomplete
   const variableNames = Object.keys(variables).map(k => `{{${k}}}`);
 
-  // Handle click outside to close autocomplete
+  // Handle click outside to close autocomplete and more operators
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -47,6 +49,13 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
         !inputRef.current.contains(event.target as Node)
       ) {
         setShowAutocomplete(false);
+      }
+
+      if (
+        moreOperatorsRef.current &&
+        !moreOperatorsRef.current.contains(event.target as Node)
+      ) {
+        setShowMoreOperators(false);
       }
     };
 
@@ -190,26 +199,32 @@ export const ConditionEditor: React.FC<ConditionEditorProps> = ({
             {op.label}
           </button>
         ))}
-        <div className="relative group">
+        <div className="relative">
           <button
             type="button"
             className="px-2 py-0.5 text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 rounded transition-colors flex items-center"
+            onClick={() => setShowMoreOperators(!showMoreOperators)}
           >
             more <ChevronDown size={10} className="ml-0.5" />
           </button>
-          <div className="hidden group-hover:block absolute z-10 left-0 top-full mt-1 bg-white border border-slate-200 rounded shadow-lg">
-            {OPERATORS.slice(6).map((op) => (
-              <button
-                key={op.label}
-                type="button"
-                className="w-full px-3 py-1.5 text-left text-xs font-mono hover:bg-slate-50 flex items-center justify-between"
-                onClick={() => insertOperator(op.label)}
-              >
-                <span className="text-slate-700">{op.label}</span>
-                <span className="text-slate-400 ml-4">{op.description}</span>
-              </button>
-            ))}
-          </div>
+          {showMoreOperators && (
+            <div ref={moreOperatorsRef} className="absolute z-10 left-0 top-full mt-1 bg-white border border-slate-200 rounded shadow-lg">
+              {OPERATORS.slice(6).map((op) => (
+                <button
+                  key={op.label}
+                  type="button"
+                  className="w-full px-3 py-1.5 text-left text-xs font-mono hover:bg-slate-50 flex items-center justify-between"
+                  onClick={() => {
+                    insertOperator(op.label);
+                    setShowMoreOperators(false);
+                  }}
+                >
+                  <span className="text-slate-700">{op.label}</span>
+                  <span className="text-slate-400 ml-4">{op.description}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

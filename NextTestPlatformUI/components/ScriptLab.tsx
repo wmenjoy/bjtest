@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Script, ScriptType, Workflow, TestCase, ScriptParameter } from '../types';
-import { Play, GitMerge, Loader2, Settings2, X, Code } from 'lucide-react';
+import { Play, GitMerge, Loader2, Settings2, X, Code, Layers } from 'lucide-react';
 import { YamlEditor } from './YamlEditor';
 import { useConfig } from '../ConfigContext';
 import { NodeInspector } from './scriptlab/NodeInspector';
@@ -26,7 +26,7 @@ interface ScriptLabProps {
 
 export const ScriptLab: React.FC<ScriptLabProps> = ({ scripts, workflows, cases, activeEnvironment, projectId, onAddScript, onUpdateScript, onAddWorkflow, onUpdateWorkflow }) => {
     const { t } = useConfig();
-    const [mode, setMode] = useState<'scripts' | 'workflows'>('workflows');
+    const [mode, setMode] = useState<'scripts' | 'workflows' | 'suites'>('workflows');
     const [viewMode, setViewMode] = useState<'visual' | 'code'>('visual');
     const [layout, setLayout] = useState<'horizontal' | 'vertical'>('horizontal');
     
@@ -171,9 +171,9 @@ export const ScriptLab: React.FC<ScriptLabProps> = ({ scripts, workflows, cases,
                                                   <div className="w-10 h-10 rounded-full bg-slate-800 text-white flex items-center justify-center shadow-lg border-4 border-slate-200"><Play size={14}/></div>
                                                   <span className="text-[9px] font-bold text-slate-400 mt-1">{t('lab.start')}</span>
                                               </div>
-                                              <WorkflowRenderer 
-                                                nodes={selectedWorkflow.nodes} 
-                                                parentId="root" 
+                                              <WorkflowRenderer
+                                                nodes={selectedWorkflow.nodes}
+                                                parentId="root"
                                                 branch="children"
                                                 props={{
                                                     nodes: selectedWorkflow.nodes,
@@ -189,17 +189,17 @@ export const ScriptLab: React.FC<ScriptLabProps> = ({ scripts, workflows, cases,
                                               <div className={`p-2 border-2 border-dashed border-slate-300 rounded-lg text-slate-400 text-[10px] w-24 text-center ${layout === 'vertical' ? 'mt-4' : 'ml-4'}`}>{t('lab.end')}</div>
                                           </div>
                                       </div>
-                                      
-                                      <Toolbox 
-                                          visible={!!insertionPoint} 
-                                          onClose={() => setInsertionPoint(null)} 
-                                          onAddNode={handleAddNode} 
+
+                                      <Toolbox
+                                          visible={!!insertionPoint}
+                                          onClose={() => setInsertionPoint(null)}
+                                          onAddNode={handleAddNode}
                                       />
                                   </div>
-                                  
+
                                   {selectedNodeForInspector && (
-                                      <NodeInspector 
-                                          node={selectedNodeForInspector} 
+                                      <NodeInspector
+                                          node={selectedNodeForInspector}
                                           workflowNodes={selectedWorkflow.nodes}
                                           onUpdate={handleUpdateNode}
                                           onClose={() => setSelectedNodeId(null)}
@@ -224,10 +224,10 @@ export const ScriptLab: React.FC<ScriptLabProps> = ({ scripts, workflows, cases,
                              </div>
                          )
                      ) : <div className="flex-1 flex items-center justify-center text-slate-400"><GitMerge size={48} className="mb-4 opacity-20"/><p>{t('lab.selectWorkflow')}</p></div>
-                 ) : (
+                 ) : mode === 'scripts' ? (
                      selectedScript ? (
-                        <ActionEditor 
-                            initialScript={selectedScript} 
+                        <ActionEditor
+                            initialScript={selectedScript}
                             onSave={handleScriptSave}
                             onCancel={() => {}}
                             inline={true}
@@ -238,6 +238,12 @@ export const ScriptLab: React.FC<ScriptLabProps> = ({ scripts, workflows, cases,
                             <p>Select an action to edit</p>
                         </div>
                      )
+                 ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center text-slate-400">
+                        <Layers size={48} className="mb-4 opacity-20"/>
+                        <p className="text-lg font-semibold text-slate-500">Test Suites (Coming Soon)</p>
+                        <p className="text-sm text-slate-400 mt-2">Create and manage test suites</p>
+                    </div>
                  )}
              </div>
          </div>

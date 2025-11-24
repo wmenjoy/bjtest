@@ -160,6 +160,7 @@ export interface CreateTestCaseRequest {
   status?: 'active' | 'inactive';
   objective?: string;
   timeout?: number;
+  steps?: unknown[];  // Support for new step-based format with loop/branch
   http?: {
     method: string;
     url?: string;
@@ -178,6 +179,7 @@ export interface UpdateTestCaseRequest {
   status?: 'active' | 'inactive';
   objective?: string;
   timeout?: number;
+  steps?: unknown[];  // Support for new step-based format with loop/branch
   http?: {
     method: string;
     url?: string;

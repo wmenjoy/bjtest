@@ -116,6 +116,12 @@ function generateStepsFromBackend(backend: BackendTestCase): TestStep[] {
 }
 
 export function testCaseFromBackend(backend: BackendTestCase): TestCase {
+  // Use backend.steps if available (new step-based format with loop/branch support)
+  // Otherwise fallback to legacy generateStepsFromBackend for old test cases
+  const steps = backend.steps && backend.steps.length > 0
+    ? backend.steps as TestStep[]
+    : generateStepsFromBackend(backend);
+
   return {
     id: backend.testId,
     projectId: backend.projectId || 'default',
@@ -123,7 +129,7 @@ export function testCaseFromBackend(backend: BackendTestCase): TestCase {
     description: backend.objective || '',
     priority: priorityFromBackend(backend.priority),
     status: statusFromBackend(backend.status),
-    steps: generateStepsFromBackend(backend),
+    steps,
     tags: backend.tags || [],
     folderId: backend.groupId,
     lastUpdated: backend.updatedAt,
@@ -141,6 +147,7 @@ export function testCaseToBackend(testCase: TestCase): CreateTestCaseRequest {
     priority: priorityToBackend(testCase.priority) || undefined,
     status: statusToBackend(testCase.status),
     objective: testCase.description,
+    steps: testCase.steps,  // Include steps array for loop/branch support
     workflowId: testCase.linkedWorkflowId,
     tags: testCase.tags,
   };

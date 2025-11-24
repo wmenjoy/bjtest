@@ -4,9 +4,11 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	apierrors "test-management-service/internal/errors"
 	"test-management-service/internal/middleware"
+	"test-management-service/internal/repository"
 	"test-management-service/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -32,6 +34,11 @@ func (h *TestHandler) RegisterRoutes(rg *gin.RouterGroup) {
 	rg.GET("/tests", h.ListTestCases)
 	rg.GET("/tests/search", h.SearchTestCases)
 	rg.GET("/tests/stats", h.GetTestStats)
+
+	// Advanced search and analytics
+	rg.GET("/tests/advanced-search", h.AdvancedSearch)
+	rg.GET("/tests/statistics", h.GetStatistics)
+	rg.GET("/tests/flaky", h.GetFlakyTests)
 
 	// Test tree (for Web UI)
 	rg.GET("/test-tree", h.GetTestTree)
@@ -465,5 +472,130 @@ func (h *TestHandler) GetTestStats(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data":    stats,
+	})
+}
+
+// ===== Advanced Search and Analytics Handlers =====
+
+// AdvancedSearch performs multi-condition search
+// GET /api/v2/tests/advanced-search?keywords=login&priorities=P0,P1&statuses=Active&tags=smoke,api&successRateMin=80&successRateMax=100&ownerId=user123&lastRunBefore=2024-01-01T00:00:00Z&isFlaky=false&page=1&pageSize=20
+func (h *TestHandler) AdvancedSearch(c *gin.Context) {
+	tenantID := middleware.GetTenantID(c)
+	if tenantID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Tenant ID not found in context"})
+		return
+	}
+
+	filter := repository.TestCaseFilter{
+		Keywords:      c.Query("keywords"),
+		OwnerID:       c.Query("ownerId"),
+		LastRunBefore: c.Query("lastRunBefore"),
+		Page:          1,
+		PageSize:      20,
+	}
+
+	// Parse priorities (comma-separated)
+	if prioritiesStr := c.Query("priorities"); prioritiesStr != "" {
+		filter.Priorities = strings.Split(prioritiesStr, ",")
+	}
+
+	// Parse statuses (comma-separated)
+	if statusesStr := c.Query("statuses"); statusesStr != "" {
+		filter.Statuses = strings.Split(statusesStr, ",")
+	}
+
+	// Parse tags (comma-separated)
+	if tagsStr := c.Query("tags"); tagsStr != "" {
+		filter.Tags = strings.Split(tagsStr, ",")
+	}
+
+	// Parse success rate range
+	if minStr := c.Query("successRateMin"); minStr != "" {
+		if min, err := strconv.Atoi(minStr); err == nil {
+			filter.SuccessRateMin = &min
+		}
+	}
+
+	if maxStr := c.Query("successRateMax"); maxStr != "" {
+		if max, err := strconv.Atoi(maxStr); err == nil {
+			filter.SuccessRateMax = &max
+		}
+	}
+
+	// Parse isFlaky
+	if isFlakyStr := c.Query("isFlaky"); isFlakyStr != "" {
+		isFlaky := isFlakyStr == "true"
+		filter.IsFlaky = &isFlaky
+	}
+
+	// Parse pagination
+	if pageStr := c.Query("page"); pageStr != "" {
+		if page, err := strconv.Atoi(pageStr); err == nil {
+			filter.Page = page
+		}
+	}
+
+	if pageSizeStr := c.Query("pageSize"); pageSizeStr != "" {
+		if pageSize, err := strconv.Atoi(pageSizeStr); err == nil {
+			filter.PageSize = pageSize
+		}
+	}
+
+	testCases, total, err := h.service.AdvancedSearch(c.Request.Context(), tenantID, filter)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search test cases", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":     testCases,
+		"total":    total,
+		"page":     filter.Page,
+		"pageSize": filter.PageSize,
+	})
+}
+
+// GetStatistics returns aggregated test statistics
+// GET /api/v2/tests/statistics
+func (h *TestHandler) GetStatistics(c *gin.Context) {
+	tenantID := middleware.GetTenantID(c)
+	if tenantID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Tenant ID not found in context"})
+		return
+	}
+
+	// Get current user ID from context (optional)
+	var currentUserID string
+	if userID, exists := c.Get("user_id"); exists {
+		currentUserID = userID.(string)
+	}
+
+	stats, err := h.service.GetStatistics(c.Request.Context(), tenantID, currentUserID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get statistics", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, stats)
+}
+
+// GetFlakyTests returns flaky tests
+// GET /api/v2/tests/flaky
+func (h *TestHandler) GetFlakyTests(c *gin.Context) {
+	tenantID := middleware.GetTenantID(c)
+	if tenantID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Tenant ID not found in context"})
+		return
+	}
+
+	testCases, err := h.service.GetFlakyTests(c.Request.Context(), tenantID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get flaky tests", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":  testCases,
+		"total": len(testCases),
 	})
 }

@@ -11,7 +11,7 @@ interface StepViewProps {
     autoExecuting: boolean;
     notes: string;
     onNotesChange: (notes: string) => void;
-    replaceVariables: (text: string) => string;
+    replaceVariables: (text: string | undefined | null) => string;
 }
 
 export const StepView: React.FC<StepViewProps> = ({ step, isCompleted, logs, autoExecuting, notes, onNotesChange, replaceVariables }) => {
@@ -40,7 +40,7 @@ export const StepView: React.FC<StepViewProps> = ({ step, isCompleted, logs, aut
                             {step.linkedScriptId ? t('runner.automated') : step.linkedWorkflowId ? t('runner.subflow') : t('runner.manual')}
                         </h4>
                     </div>
-                    <p className="text-xl text-slate-800 font-medium leading-relaxed">{replaceVariables(step.instruction)}</p>
+                    <p className="text-xl text-slate-800 font-medium leading-relaxed">{replaceVariables(step.instruction || step.name || step.summary || 'No instruction')}</p>
                     
                     {step.condition && (
                         <div className="mt-2 flex items-center text-xs text-amber-600 bg-amber-50 w-max px-2 py-1 rounded border border-amber-100">
@@ -66,7 +66,7 @@ export const StepView: React.FC<StepViewProps> = ({ step, isCompleted, logs, aut
                 <div className="bg-blue-50 p-6 rounded-xl border border-blue-100 relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-1 h-full bg-blue-400"></div>
                     <h4 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-2">{t('testCase.expectedResult')}</h4>
-                    <p className="text-lg text-blue-900 font-medium leading-relaxed">{replaceVariables(step.expectedResult)}</p>
+                    <p className="text-lg text-blue-900 font-medium leading-relaxed">{replaceVariables(step.expectedResult || 'Verify step executes successfully')}</p>
                 </div>
             </div>
             <div>

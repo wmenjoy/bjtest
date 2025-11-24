@@ -33,6 +33,7 @@ export { workflowApi } from './workflowApi';
 export { tenantApi } from './tenantApi';
 export { projectApi } from './projectApi';
 export { userApi, roleApi } from './userApi';
+export { actionTemplateApi } from './actionTemplateApi';
 
 // WebSocket
 export {

@@ -3,7 +3,6 @@ package models
 import (
 	"database/sql/driver"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 	"gorm.io/gorm"
@@ -46,6 +45,32 @@ type TestCase struct {
 	// Lifecycle hooks
 	SetupHooks    JSONArray `gorm:"type:text;column:setup_hooks" json:"setupHooks,omitempty"`
 	TeardownHooks JSONArray `gorm:"type:text;column:teardown_hooks" json:"teardownHooks,omitempty"`
+
+	// Value scoring columns
+	CoverageScore       int `gorm:"default:0;index" json:"coverageScore,omitempty"`
+	StabilityScore      int `gorm:"default:0;index" json:"stabilityScore,omitempty"`
+	EfficiencyScore     int `gorm:"default:0" json:"efficiencyScore,omitempty"`
+	MaintainabilityScore int `gorm:"default:0" json:"maintainabilityScore,omitempty"`
+	OverallScore        int `gorm:"default:0;index" json:"overallScore,omitempty"`
+
+	// Execution statistics
+	ExecutionCount   int        `gorm:"default:0;index" json:"executionCount,omitempty"`
+	SuccessCount     int        `gorm:"default:0" json:"successCount,omitempty"`
+	FailureCount     int        `gorm:"default:0" json:"failureCount,omitempty"`
+	AvgDuration      int        `gorm:"default:0" json:"avgDuration,omitempty"` // milliseconds
+	SuccessRate      int        `gorm:"default:0;index" json:"successRate,omitempty"` // percentage 0-100
+	LastRunAt        *time.Time `gorm:"index" json:"lastRunAt,omitempty"`
+	LastSuccessAt    *time.Time `json:"lastSuccessAt,omitempty"`
+	LastFailureAt    *time.Time `json:"lastFailureAt,omitempty"`
+
+	// Flaky test detection
+	IsFlaky             bool `gorm:"default:false;index" json:"isFlaky,omitempty"`
+	FlakyScore          int  `gorm:"default:0" json:"flakyScore,omitempty"` // 0-100, higher = more flaky
+	ConsecutiveFailures int  `gorm:"default:0" json:"consecutiveFailures,omitempty"`
+
+	// Ownership and maintenance
+	OwnerID        string `gorm:"size:100;index" json:"ownerId,omitempty"`
+	LastModifiedBy string `gorm:"size:100" json:"lastModifiedBy,omitempty"`
 
 	CreatedAt time.Time      `json:"createdAt"`
 	UpdatedAt time.Time      `json:"updatedAt"`
@@ -134,10 +159,17 @@ func (j *JSONB) Scan(value interface{}) error {
 		*j = nil
 		return nil
 	}
-	bytes, ok := value.([]byte)
-	if !ok {
-		return errors.New("failed to unmarshal JSONB value")
+
+	var bytes []byte
+	switch v := value.(type) {
+	case []byte:
+		bytes = v
+	case string:
+		bytes = []byte(v)
+	default:
+		return fmt.Errorf("failed to unmarshal JSONB value: unsupported type %T", value)
 	}
+
 	return json.Unmarshal(bytes, j)
 }
 

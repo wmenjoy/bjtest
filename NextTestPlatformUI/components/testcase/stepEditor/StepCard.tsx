@@ -274,10 +274,17 @@ export const StepCard: React.FC<StepCardProps> = ({
             </div>
 
             {/* Quick Config Preview (collapsed state) */}
-            {!isExpanded && (step.config?.url || step.config?.method) && (
+            {!isExpanded && (step.config?.url || step.config?.method) && step.type !== 'command' && (
               <div className="mt-2 text-xs font-mono text-slate-500 bg-slate-50 px-2 py-1 rounded truncate">
                 {step.config?.method && <span className="font-semibold text-slate-700">{step.config.method} </span>}
                 {step.config?.url}
+              </div>
+            )}
+            {/* Command Preview (collapsed state) */}
+            {!isExpanded && step.type === 'command' && step.config?.cmd && (
+              <div className="mt-2 text-xs font-mono bg-slate-900 text-green-400 px-2 py-1 rounded truncate">
+                <span className="text-slate-500">$ </span>
+                {step.config.cmd} {Array.isArray(step.config?.args) ? step.config.args.join(' ') : ''}
               </div>
             )}
           </div>
@@ -355,6 +362,79 @@ export const StepCard: React.FC<StepCardProps> = ({
                     />
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Command Config (if type is command) */}
+            {step.type === 'command' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                    Command
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 text-sm font-mono border border-slate-200 rounded-lg bg-white focus:border-blue-400 outline-none"
+                    placeholder="echo, curl, python, etc."
+                    value={step.config?.cmd || ''}
+                    onChange={(e) =>
+                      updateField('config', { ...step.config, cmd: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                    Arguments (one per line or space-separated)
+                  </label>
+                  <textarea
+                    className="w-full px-3 py-2 text-sm font-mono border border-slate-200 rounded-lg bg-white focus:border-blue-400 outline-none resize-none"
+                    placeholder="--flag value&#10;-o output.txt&#10;{{variable}}"
+                    rows={3}
+                    value={Array.isArray(step.config?.args) ? step.config.args.join('\n') : (step.config?.args || '')}
+                    onChange={(e) => {
+                      const args = e.target.value.split('\n').filter(a => a.trim());
+                      updateField('config', { ...step.config, args });
+                    }}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                      Working Directory (optional)
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full px-3 py-2 text-sm font-mono border border-slate-200 rounded-lg bg-white focus:border-blue-400 outline-none"
+                      placeholder="/path/to/dir or {{workDir}}"
+                      value={step.config?.workDir || ''}
+                      onChange={(e) =>
+                        updateField('config', { ...step.config, workDir: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                      Timeout (seconds)
+                    </label>
+                    <input
+                      type="number"
+                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:border-blue-400 outline-none"
+                      placeholder="30"
+                      min={0}
+                      value={step.config?.timeout || ''}
+                      onChange={(e) =>
+                        updateField('config', { ...step.config, timeout: parseInt(e.target.value) || undefined })
+                      }
+                    />
+                  </div>
+                </div>
+                {/* Command Preview */}
+                {(step.config?.cmd || step.config?.args) && (
+                  <div className="bg-slate-900 text-green-400 font-mono text-sm p-3 rounded-lg overflow-x-auto">
+                    <span className="text-slate-500">$ </span>
+                    {step.config?.cmd || 'command'} {Array.isArray(step.config?.args) ? step.config.args.join(' ') : ''}
+                  </div>
+                )}
               </div>
             )}
 

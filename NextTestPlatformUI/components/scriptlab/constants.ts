@@ -1,6 +1,6 @@
 
 import { NodeConfig, NodeType } from '../../types';
-import { Globe, Database, GitBranch, Repeat, HardDrive, Sparkles, Monitor, Box } from 'lucide-react';
+import { Globe, Database, GitBranch, Repeat, HardDrive, Sparkles, Monitor, Box, GitMerge } from 'lucide-react';
 
 export type FieldType = 'string' | 'number' | 'boolean' | 'select' | 'code' | 'json' | 'kv-list';
 
@@ -143,6 +143,34 @@ export const NODE_SPECS: Partial<Record<NodeType, NodeSpec>> = {
             }
         ],
         outputMock: { success: true, url: "https://example.com", textFound: "Welcome" }
+    },
+    [NodeType.BRANCH]: {
+        title: 'Branch',
+        icon: GitBranch,
+        color: 'text-purple-600',
+        groups: [
+            {
+                title: 'Branch Configuration',
+                fields: [
+                    { key: 'condition', label: 'Branch Condition', type: 'string', placeholder: '{{variable}} == "value"', description: 'Condition to determine branch path' }
+                ]
+            }
+        ],
+        outputMock: { branchTaken: "path_a" }
+    },
+    [NodeType.MERGE]: {
+        title: 'Merge',
+        icon: GitMerge,
+        color: 'text-teal-600',
+        groups: [
+            {
+                title: 'Merge Configuration',
+                fields: [
+                    { key: 'inputs', label: 'Merge Strategy', type: 'select', options: ['wait-all', 'wait-any', 'first-complete'], description: 'How to merge parallel branches' }
+                ]
+            }
+        ],
+        outputMock: { merged: true, branchCount: 2 }
     }
 };
 

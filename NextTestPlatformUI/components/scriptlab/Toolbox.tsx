@@ -14,7 +14,7 @@ export const Toolbox: React.FC<ToolboxProps> = ({ visible, onClose, onAddNode })
     const { t } = useConfig();
 
     const tools = [
-        { category: 'Logic & Flow', items: [{ type: NodeType.CONDITION, icon: GitBranch, label: 'If / Else', bg: 'bg-amber-50' }, { type: NodeType.LOOP, icon: Repeat, label: 'Loop', bg: 'bg-orange-50' }, { type: NodeType.CALL_WORKFLOW, icon: GitMerge, label: 'Sub Flow', bg: 'bg-indigo-100' }] },
+        { category: 'Logic & Flow', items: [{ type: NodeType.CONDITION, icon: GitBranch, label: 'If / Else', bg: 'bg-amber-50' }, { type: NodeType.LOOP, icon: Repeat, label: 'Loop', bg: 'bg-orange-50' }, { type: NodeType.CALL_WORKFLOW, icon: GitMerge, label: 'Sub Flow', bg: 'bg-indigo-100' }, { type: NodeType.BRANCH, icon: GitBranch, label: 'Branch', bg: 'bg-purple-50' }, { type: NodeType.MERGE, icon: GitMerge, label: 'Merge', bg: 'bg-teal-50' }] },
         { category: 'Integration', items: [{ type: NodeType.HTTP_REQUEST, icon: Globe, label: 'HTTP', bg: 'bg-blue-50' }, { type: NodeType.RPC_CALL, icon: Plug, label: 'RPC', bg: 'bg-cyan-50' }, { type: NodeType.MCP_TOOL, icon: Plug, label: 'MCP Tool', bg: 'bg-green-50' }] },
         { category: 'Data & Store', items: [{ type: NodeType.DB_QUERY, icon: Database, label: 'SQL', bg: 'bg-emerald-50' }, { type: NodeType.REDIS_CMD, icon: HardDrive, label: 'Redis', bg: 'bg-red-50' }, { type: NodeType.ES_QUERY, icon: Search, label: 'Elastic', bg: 'bg-yellow-50' }] },
         { category: 'Infrastructure', items: [{ type: NodeType.KAFKA_PUB, icon: Activity, label: 'Kafka', bg: 'bg-slate-100' }, { type: NodeType.SHELL_CMD, icon: Terminal, label: 'Shell', bg: 'bg-zinc-200' }] },

@@ -274,19 +274,39 @@ export interface TestCase {
   priority: Priority;
   status: Status;
   steps: TestStep[];
-  
+
   // Context / First Principles
   variables?: Record<string, string>; // "Given" data / Environment variables
   preconditions?: string[]; // "Given" state
-  
+
   testData?: TestData[]; // Imported data for the case
   tags: string[];
   folderId: string;
   lastUpdated: string;
-  
+
   // Automation Strategy
   automationType?: 'MANUAL' | 'WORKFLOW';
   linkedWorkflowId?: string;
+
+  // Value Scoring (from backend migration 006)
+  coverageScore?: number;       // 0-100
+  stabilityScore?: number;      // 0-100
+  efficiencyScore?: number;     // 0-100
+  maintainabilityScore?: number; // 0-100
+  overallScore?: number;        // 0-100
+
+  // Execution Statistics
+  executionCount?: number;
+  successRate?: number;         // 0-100 percentage
+  avgDuration?: number;         // milliseconds
+  lastRunAt?: string;           // ISO datetime
+
+  // Flaky Test Detection
+  isFlaky?: boolean;
+  flakyScore?: number;          // 0-100, higher = more flaky
+
+  // Ownership
+  ownerId?: string;
 }
 
 export interface TestFolder {
@@ -355,7 +375,9 @@ export enum NodeType {
   MCP_TOOL = 'MCP_TOOL', // Model Context Protocol
 
   // Logic Flow
-  CALL_WORKFLOW = 'CALL_WORKFLOW'
+  CALL_WORKFLOW = 'CALL_WORKFLOW',
+  BRANCH = 'BRANCH',
+  MERGE = 'MERGE'
 }
 
 export interface DataTypeSchema {
