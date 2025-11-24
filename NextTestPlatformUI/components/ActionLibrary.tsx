@@ -1,11 +1,12 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Script, ScriptType, NodeType, Workflow, TestCase, WorkflowNode } from '../types';
 import { Code, Terminal, Box, Search, Plus, Zap, Play, Copy, X, Edit3, Trash2, CheckSquare, Square, AlertTriangle, LogIn, LogOut } from 'lucide-react';
 import { useConfig } from '../ConfigContext';
 import { ActionDef, BUILT_IN_ACTIONS } from './library/types';
 import { ActionEditor } from './library/ActionEditor';
 import { ActionDetails } from './library/ActionDetails';
+import { actionTemplateApi, ActionTemplate } from '../services/api/actionTemplateApi';
 
 interface ActionLibraryProps {
   scripts: Script[];
@@ -32,9 +33,39 @@ export const ActionLibrary: React.FC<ActionLibraryProps> = ({ scripts, workflows
   const [activeTab, setActiveTab] = useState<'builtin' | 'custom' | 'templates'>('builtin');
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFilter, setSelectedFilter] = useState<string>('All');
-  
+
+  // Backend Action Templates state
+  const [templates, setTemplates] = useState<ActionTemplate[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [templatesError, setTemplatesError] = useState<string | null>(null);
+
   const [selectedScripts, setSelectedScripts] = useState<string[]>([]);
-  
+
+  // Load backend action templates when builtin tab is active or filter changes
+  useEffect(() => {
+    if (activeTab === 'builtin') {
+      loadActionTemplates();
+    }
+  }, [activeTab, selectedFilter, searchTerm]);
+
+  const loadActionTemplates = async () => {
+    try {
+      setTemplatesLoading(true);
+      setTemplatesError(null);
+      const result = await actionTemplateApi.getAccessibleTemplates({
+        category: selectedFilter !== 'All' ? selectedFilter : undefined,
+        search: searchTerm || undefined,
+        pageSize: 100
+      });
+      setTemplates(result.data || []);
+    } catch (err: any) {
+      console.error('Failed to load action templates:', err);
+      setTemplatesError(err.message || 'Failed to load templates');
+    } finally {
+      setTemplatesLoading(false);
+    }
+  };
+
   // Modal States
   const [showEditor, setShowEditor] = useState(false);
   const [editingScript, setEditingScript] = useState<Partial<Script>>({});
@@ -55,7 +86,7 @@ export const ActionLibrary: React.FC<ActionLibraryProps> = ({ scripts, workflows
       isBuiltIn: false
   }));
 
-  const filteredBuiltIn = BUILT_IN_ACTIONS.filter(a => 
+  const filteredBuiltIn = BUILT_IN_ACTIONS.filter(a =>
     (selectedFilter === 'All' || a.category === selectedFilter) &&
     a.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -63,7 +94,8 @@ export const ActionLibrary: React.FC<ActionLibraryProps> = ({ scripts, workflows
   const filteredCustom = customActions.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()));
   const filteredTemplates = templateActions.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
-  const categories = ['All', ...Array.from(new Set(BUILT_IN_ACTIONS.map(a => a.category)))];
+  // Categories from backend templates
+  const categories = ['All', ...Array.from(new Set(templates.map(t => t.category).filter(Boolean)))];
 
   const getScriptReferences = (scriptId: string) => {
       const refs: string[] = [];
@@ -150,6 +182,27 @@ export const ActionLibrary: React.FC<ActionLibraryProps> = ({ scripts, workflows
       setViewingAction(action);
   };
 
+  // Convert backend ActionTemplate to frontend ActionDef format
+  const convertTemplateToActionDef = (template: ActionTemplate): ActionDef => {
+      return {
+          id: template.templateId,
+          name: template.name,
+          description: template.description,
+          type: ScriptType.PYTHON, // Default type, could be derived from category
+          category: template.category || 'General',
+          isBuiltIn: template.scope === 'system',
+          parameters: template.parameters || [],
+          outputs: template.outputs || [],
+          content: template.sourceCode || '',
+          testExamples: []
+      };
+  };
+
+  const handleViewTemplate = (template: ActionTemplate) => {
+      const actionDef = convertTemplateToActionDef(template);
+      setViewingAction(actionDef);
+  };
+
   const handleUseTemplate = (tpl: ActionDef) => {
       const newScript: Script = {
           id: `sc-${Date.now()}`,
@@ -165,7 +218,7 @@ export const ActionLibrary: React.FC<ActionLibraryProps> = ({ scripts, workflows
           testExamples: tpl.testExamples ? [...tpl.testExamples] : [],
           tags: []
       };
-      
+
       setViewingAction(null);
       setEditingScript(newScript);
       setIsReadOnlyView(false);
@@ -236,22 +289,68 @@ export const ActionLibrary: React.FC<ActionLibraryProps> = ({ scripts, workflows
       )}
 
       <div className="p-6 overflow-y-auto flex-1">
-          {/* BUILT-IN MODULES */}
+          {/* BUILT-IN MODULES (Backend Action Templates) */}
           {activeTab === 'builtin' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredBuiltIn.map((action, idx) => (
-                      <div key={idx} onClick={() => handleViewDetails(action)} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer">
-                          <div className="flex items-start justify-between mb-3">
-                              <div className="p-2 bg-slate-100 rounded-lg text-slate-600">
-                                  <Box size={24}/>
-                              </div>
-                              <span className="text-[10px] uppercase font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded border border-slate-100">{action.category}</span>
-                          </div>
-                          <h3 className="font-bold text-slate-800">{action.name}</h3>
-                          <p className="text-sm text-slate-500 mt-1">{action.description}</p>
+              <>
+                  {templatesLoading ? (
+                      <div className="flex items-center justify-center p-12">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                          <span className="ml-3 text-slate-600">Loading action templates...</span>
                       </div>
-                  ))}
-              </div>
+                  ) : templatesError ? (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+                          <div className="font-semibold mb-1">Error loading templates</div>
+                          <div className="text-sm">{templatesError}</div>
+                      </div>
+                  ) : templates.length === 0 ? (
+                      <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl p-12 text-center text-slate-400">
+                          <Box size={48} className="mx-auto mb-4 opacity-20"/>
+                          <p>No action templates found</p>
+                      </div>
+                  ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {templates.map((template) => (
+                              <div
+                                  key={template.templateId}
+                                  onClick={() => handleViewTemplate(template)}
+                                  className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer"
+                              >
+                                  <div className="flex items-start justify-between mb-3">
+                                      <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600">
+                                          <Box size={24}/>
+                                      </div>
+                                      <div className="flex flex-col items-end gap-1">
+                                          <span className="text-[10px] uppercase font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded border border-slate-200">
+                                              {template.category}
+                                          </span>
+                                          {template.scope && (
+                                              <span className={`text-[9px] uppercase font-medium px-2 py-0.5 rounded ${
+                                                  template.scope === 'system' ? 'bg-blue-50 text-blue-600' :
+                                                  template.scope === 'platform' ? 'bg-green-50 text-green-600' :
+                                                  'bg-purple-50 text-purple-600'
+                                              }`}>
+                                                  {template.scope}
+                                              </span>
+                                          )}
+                                      </div>
+                                  </div>
+                                  <h3 className="font-bold text-slate-800 mb-1">{template.name}</h3>
+                                  <p className="text-sm text-slate-500 mb-3 line-clamp-2">{template.description}</p>
+                                  <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-100">
+                                      <span className="flex items-center">
+                                          <LogIn size={12} className="mr-1"/>
+                                          {template.parameters?.length || 0} inputs
+                                      </span>
+                                      <span className="flex items-center">
+                                          <Play size={12} className="mr-1"/>
+                                          Used {template.usageCount} times
+                                      </span>
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
+                  )}
+              </>
           )}
 
           {/* CUSTOM ACTIONS TABLE */}

@@ -39,6 +39,11 @@ type TestService interface {
 	// Test runs
 	GetTestRun(ctx context.Context, runID, tenantID, projectID string) (*models.TestRun, error)
 	ListTestRuns(ctx context.Context, tenantID, projectID string, limit, offset int) ([]models.TestRun, int64, error)
+
+	// Advanced search and analytics
+	AdvancedSearch(ctx context.Context, tenantID string, filter repository.TestCaseFilter) ([]*models.TestCase, int64, error)
+	GetStatistics(ctx context.Context, tenantID string, currentUserID string) (*repository.TestStatistics, error)
+	GetFlakyTests(ctx context.Context, tenantID string) ([]*models.TestCase, error)
 }
 
 type testService struct {
@@ -47,6 +52,9 @@ type testService struct {
 	resultRepo repository.TestResultRepository
 	runRepo    repository.TestRunRepository
 	executor   *testcase.UnifiedTestExecutor
+	// workflowCaseRepo provides access to advanced workflow test case methods
+	// This is optional and can be nil if not needed
+	workflowCaseRepo *repository.WorkflowTestCaseRepository
 }
 
 // NewTestService creates a new test service
@@ -63,7 +71,14 @@ func NewTestService(
 		resultRepo: resultRepo,
 		runRepo:    runRepo,
 		executor:   executor,
+		// workflowCaseRepo is nil by default, can be set via SetWorkflowCaseRepo
 	}
+}
+
+// SetWorkflowCaseRepo sets the workflow test case repository for advanced features
+// This is an optional dependency that enables AdvancedSearch, GetStatistics, and GetFlakyTests
+func (s *testService) SetWorkflowCaseRepo(repo *repository.WorkflowTestCaseRepository) {
+	s.workflowCaseRepo = repo
 }
 
 // ===== Request/Response DTOs =====
@@ -81,6 +96,9 @@ type CreateTestCaseRequest struct {
 	// Workflow integration (NEW)
 	WorkflowID    string                 `json:"workflowId,omitempty"`    // Mode 1: Reference workflow
 	WorkflowDef   map[string]interface{} `json:"workflowDef,omitempty"`   // Mode 2: Embedded workflow
+
+	// Test steps with control flow support (NEW)
+	Steps         []interface{}          `json:"steps"`                   // Array of TestStep with loop/branch/children support
 
 	// Existing fields
 	HTTP          map[string]interface{} `json:"http"`
@@ -102,6 +120,9 @@ type UpdateTestCaseRequest struct {
 	// Workflow integration (NEW)
 	WorkflowID    string                 `json:"workflowId,omitempty"`
 	WorkflowDef   map[string]interface{} `json:"workflowDef,omitempty"`
+
+	// Test steps with control flow support (NEW)
+	Steps         []interface{}          `json:"steps"`                   // Array of TestStep with loop/branch/children support
 
 	HTTP          map[string]interface{} `json:"http"`
 	Command       map[string]interface{} `json:"command"`
@@ -149,6 +170,11 @@ func (s *testService) CreateTestCase(ctx context.Context, tenantID, projectID st
 		Status:    req.Status,
 		Objective: req.Objective,
 		Timeout:   req.Timeout,
+	}
+
+	// Test steps with control flow
+	if req.Steps != nil {
+		tc.Steps = req.Steps
 	}
 
 	if req.HTTP != nil {
@@ -211,6 +237,10 @@ func (s *testService) UpdateTestCase(ctx context.Context, testID, tenantID, proj
 	}
 	if req.Timeout > 0 {
 		tc.Timeout = req.Timeout
+	}
+	// Test steps with control flow
+	if req.Steps != nil {
+		tc.Steps = req.Steps
 	}
 	if req.HTTP != nil {
 		tc.HTTPConfig = req.HTTP
@@ -464,16 +494,33 @@ func (s *testService) convertToExecutorTestCase(tc *models.TestCase) *testcase.T
 		execTC.WorkflowDef = tc.WorkflowDef
 	}
 
-	// Convert HTTP config
-	if tc.HTTPConfig != nil {
+	// Convert HTTP config - supports both old format (HTTPConfig) and new format (Steps[0].Config)
+	httpConfig := tc.HTTPConfig
+
+	// Fallback: If HTTPConfig is nil, try to extract from first step's config
+	if httpConfig == nil && len(tc.Steps) > 0 {
+		if stepMap, ok := tc.Steps[0].(map[string]interface{}); ok {
+			stepType, _ := stepMap["type"].(string)
+			if stepType == "http" {
+				if config, ok := stepMap["config"].(map[string]interface{}); ok {
+					httpConfig = config
+				}
+			}
+		}
+	}
+
+	if httpConfig != nil {
 		execTC.HTTP = &testcase.HTTPTest{}
-		if method, ok := tc.HTTPConfig["method"].(string); ok {
+		if method, ok := httpConfig["method"].(string); ok {
 			execTC.HTTP.Method = method
 		}
-		if path, ok := tc.HTTPConfig["path"].(string); ok {
+		// Support both "path" (old format) and "url" (new format)
+		if path, ok := httpConfig["path"].(string); ok {
 			execTC.HTTP.Path = path
+		} else if url, ok := httpConfig["url"].(string); ok {
+			execTC.HTTP.Path = url
 		}
-		if headers, ok := tc.HTTPConfig["headers"].(map[string]interface{}); ok {
+		if headers, ok := httpConfig["headers"].(map[string]interface{}); ok {
 			execTC.HTTP.Headers = make(map[string]string)
 			for k, v := range headers {
 				if str, ok := v.(string); ok {
@@ -481,25 +528,39 @@ func (s *testService) convertToExecutorTestCase(tc *models.TestCase) *testcase.T
 				}
 			}
 		}
-		if body, ok := tc.HTTPConfig["body"].(map[string]interface{}); ok {
+		if body, ok := httpConfig["body"].(map[string]interface{}); ok {
 			execTC.HTTP.Body = body
 		}
 	}
 
-	// Convert Command config
-	if tc.CommandConfig != nil {
+	// Convert Command config - supports both old format (CommandConfig) and new format (Steps[0].Config)
+	cmdConfig := tc.CommandConfig
+
+	// Fallback: If CommandConfig is nil, try to extract from first step's config
+	if cmdConfig == nil && len(tc.Steps) > 0 {
+		if stepMap, ok := tc.Steps[0].(map[string]interface{}); ok {
+			stepType, _ := stepMap["type"].(string)
+			if stepType == "command" {
+				if config, ok := stepMap["config"].(map[string]interface{}); ok {
+					cmdConfig = config
+				}
+			}
+		}
+	}
+
+	if cmdConfig != nil {
 		execTC.Command = &testcase.CommandTest{}
-		if cmd, ok := tc.CommandConfig["cmd"].(string); ok {
+		if cmd, ok := cmdConfig["cmd"].(string); ok {
 			execTC.Command.Cmd = cmd
 		}
-		if args, ok := tc.CommandConfig["args"].([]interface{}); ok {
+		if args, ok := cmdConfig["args"].([]interface{}); ok {
 			for _, arg := range args {
 				if str, ok := arg.(string); ok {
 					execTC.Command.Args = append(execTC.Command.Args, str)
 				}
 			}
 		}
-		if timeout, ok := tc.CommandConfig["timeout"].(float64); ok {
+		if timeout, ok := cmdConfig["timeout"].(float64); ok {
 			execTC.Command.Timeout = int(timeout)
 		}
 	}
@@ -688,4 +749,41 @@ func (s *testService) convertToModelResult(result *testcase.TestResult) *models.
 	}
 
 	return dbResult
+}
+
+// ===== Advanced Search and Analytics =====
+
+// AdvancedSearch performs multi-condition search with pagination
+func (s *testService) AdvancedSearch(ctx context.Context, tenantID string, filter repository.TestCaseFilter) ([]*models.TestCase, int64, error) {
+	// Check if workflowCaseRepo is available
+	if s.workflowCaseRepo != nil {
+		return s.workflowCaseRepo.AdvancedSearch(ctx, tenantID, filter)
+	}
+
+	// Fallback: this should not happen in practice as we use WorkflowTestCaseRepository
+	return nil, 0, fmt.Errorf("advanced search not supported by current repository implementation")
+}
+
+// GetStatistics returns aggregated statistics for test cases
+func (s *testService) GetStatistics(ctx context.Context, tenantID string, currentUserID string) (*repository.TestStatistics, error) {
+	// Check if workflowCaseRepo is available
+	if s.workflowCaseRepo != nil {
+		return s.workflowCaseRepo.GetStatistics(ctx, tenantID, currentUserID)
+	}
+
+	// Fallback: this should not happen in practice
+	return nil, fmt.Errorf("statistics not supported by current repository implementation")
+}
+
+// GetFlakyTests returns tests identified as flaky
+// Default flaky score threshold is 70 (out of 100)
+func (s *testService) GetFlakyTests(ctx context.Context, tenantID string) ([]*models.TestCase, error) {
+	// Check if workflowCaseRepo is available
+	if s.workflowCaseRepo != nil {
+		// Default flaky score threshold: 70
+		return s.workflowCaseRepo.GetFlakyTests(ctx, tenantID, 70)
+	}
+
+	// Fallback: this should not happen in practice
+	return nil, fmt.Errorf("flaky test detection not supported by current repository implementation")
 }

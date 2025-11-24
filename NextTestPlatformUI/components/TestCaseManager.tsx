@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { TestCase, Priority, Status, TestRun, TestFolder, Script, Workflow, Environment } from '../types';
 import { TestRunner } from './TestRunner';
 import { generateTestCase } from '../services/geminiService';
@@ -9,6 +9,8 @@ import { CaseList } from './testcase/CaseList';
 import { CaseDetail } from './testcase/CaseDetail';
 import { AIGeneratorModal } from './testcase/AIGeneratorModal';
 import { Toast } from './ui/LoadingState';
+import { QuickFilter } from './testcase/QuickFilter';
+import { testCaseStatsApi, TestStatistics } from '../services/api/testCaseStatsApi';
 
 interface TestCaseManagerProps {
   cases: TestCase[];
@@ -33,10 +35,39 @@ export const TestCaseManager: React.FC<TestCaseManagerProps> = ({ cases, folders
   const [showAiModal, setShowAiModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [statistics, setStatistics] = useState<TestStatistics | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   const filteredCases = useMemo(() => {
      return cases.filter(c => c.folderId === selectedFolderId);
   }, [cases, selectedFolderId]);
+
+  // Load statistics on component mount
+  useEffect(() => {
+    loadStatistics();
+  }, []);
+
+  const loadStatistics = async () => {
+    try {
+      setStatsLoading(true);
+      const stats = await testCaseStatsApi.getStatistics();
+      setStatistics(stats);
+    } catch (err) {
+      console.error('Failed to load statistics:', err);
+      // Use default values if API fails
+      setStatistics({
+        totalTests: cases.length,
+        myTests: 0,
+        p0Tests: 0,
+        flakyTests: 0,
+        longRunningTests: 0,
+        notRunRecently: 0,
+        tagCloud: {}
+      });
+    } finally {
+      setStatsLoading(false);
+    }
+  };
 
   const handleDeleteCase = async (caseId: string) => {
     if (onDeleteCase) {
@@ -135,11 +166,13 @@ export const TestCaseManager: React.FC<TestCaseManagerProps> = ({ cases, folders
   return (
     <div className="flex h-[calc(100vh-140px)] bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
       
-      <FolderTree 
-        folders={folders} 
-        selectedFolderId={selectedFolderId} 
-        onSelectFolder={setSelectedFolderId} 
-        onAddFolder={handleAddFolder} 
+      <FolderTree
+        folders={folders}
+        selectedFolderId={selectedFolderId}
+        onSelectFolder={setSelectedFolderId}
+        onAddFolder={handleAddFolder}
+        statistics={statistics}
+        statsLoading={statsLoading}
       />
 
       <CaseList 

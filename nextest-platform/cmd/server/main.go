@@ -40,6 +40,8 @@ func main() {
 	}
 
 	// Auto migrate models
+	// Note: ActionTemplate is managed by manual migrations (005_add_action_templates.sql)
+	// TestCase extensions are managed by manual migrations (006_extend_test_cases.sql)
 	if err := db.AutoMigrate(
 		&models.Tenant{},
 		&models.Project{},
@@ -75,6 +77,7 @@ func main() {
 	workflowRunRepo := repository.NewWorkflowRunRepository(db)
 	stepExecRepo := repository.NewStepExecutionRepository(db)
 	stepLogRepo := repository.NewStepLogRepository(db)
+	actionTemplateRepo := repository.NewActionTemplateRepository(db)
 
 	// Initialize environment service and variable injector
 	envService := service.NewEnvironmentService(envRepo, envVarRepo)
@@ -97,7 +100,16 @@ func main() {
 	tenantService := service.NewTenantService(tenantRepo)
 	projectService := service.NewProjectService(projectRepo, tenantRepo)
 	testService := service.NewTestService(caseRepo, groupRepo, resultRepo, runRepo, executor)
+
+	// Initialize workflow test case repository for advanced features (statistics, flaky detection)
+	workflowCaseRepo := repository.NewWorkflowTestCaseRepository(db)
+	// Type assert to access SetWorkflowCaseRepo method
+	if ts, ok := testService.(interface{ SetWorkflowCaseRepo(*repository.WorkflowTestCaseRepository) }); ok {
+		ts.SetWorkflowCaseRepo(workflowCaseRepo)
+	}
+
 	workflowService := service.NewWorkflowService(workflowRepo, workflowRunRepo, stepExecRepo, stepLogRepo, nil, workflowExecutor)
+	actionTemplateService := service.NewActionTemplateService(actionTemplateRepo)
 
 	// Initialize TenantContext middleware for multi-tenancy support
 	tenantContext := middleware.NewTenantContext(tenantRepo, projectRepo)
@@ -110,6 +122,7 @@ func main() {
 	workflowHandler := handler.NewWorkflowHandler(workflowService)
 	wsHandler := handler.NewWebSocketHandler(hub)
 	userHandler := handler.NewUserHandler()
+	actionTemplateHandler := handler.NewActionTemplateHandler(actionTemplateService)
 
 	// Setup Gin router
 	r := gin.Default()
@@ -138,6 +151,7 @@ func main() {
 		envHandler.RegisterRoutes(api)
 		workflowHandler.RegisterRoutes(api)
 		wsHandler.RegisterRoutes(api)
+		actionTemplateHandler.RegisterRoutes(api)
 	}
 
 	// Serve static files (Web UI)

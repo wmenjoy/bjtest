@@ -30,11 +30,22 @@ export const TestRunner: React.FC<TestRunnerProps> = ({ testCase, scripts = [], 
       return 'WORKFLOW';
     }
     // Check first step for HTTP/Command indicators
+    // Support both old format (parameterValues) and new format (config/type)
     const firstStep = testCase.steps[0];
-    if (firstStep?.parameterValues?.method) {
+    if (!firstStep) return 'STEPS';
+
+    // New format: check step.type or step.config
+    if (firstStep.type === 'http' || firstStep.config?.method) {
       return 'HTTP';
     }
-    if (firstStep?.parameterValues?.command) {
+    if (firstStep.type === 'command' || firstStep.config?.cmd) {
+      return 'COMMAND';
+    }
+    // Old format: check parameterValues
+    if (firstStep.parameterValues?.method) {
+      return 'HTTP';
+    }
+    if (firstStep.parameterValues?.command) {
       return 'COMMAND';
     }
     return 'STEPS';
@@ -49,6 +60,7 @@ export const TestRunner: React.FC<TestRunnerProps> = ({ testCase, scripts = [], 
   const [httpError, setHttpError] = useState<string | null>(null);
 
   useEffect(() => {
+      isMounted.current = true;  // Reset on mount (important for React StrictMode)
       return () => { isMounted.current = false; };
   }, []);
   
@@ -75,7 +87,8 @@ export const TestRunner: React.FC<TestRunnerProps> = ({ testCase, scripts = [], 
     ? JSON.parse(testCase.testData[0].data) 
     : {};
 
-  const replaceVariables = (text: string) => {
+  const replaceVariables = (text: string | undefined | null): string => {
+      if (!text) return '';
       return text.replace(/\{\{(\w+)\}\}/g, (_, key) => {
           if (activeData[key]) return activeData[key];
           if (testCase.variables && testCase.variables[key]) return testCase.variables[key];
@@ -127,7 +140,7 @@ export const TestRunner: React.FC<TestRunnerProps> = ({ testCase, scripts = [], 
     const startTime = Date.now();
 
     try {
-      const response = await fetch(`http://localhost:8090/api/v2/tests/${testCase.id}/execute`, {
+      const response = await fetch(`http://localhost:8090/api/tests/${testCase.id}/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ envId: activeEnvironment?.id }),
@@ -144,7 +157,9 @@ export const TestRunner: React.FC<TestRunnerProps> = ({ testCase, scripts = [], 
           body: JSON.stringify(data.httpResponse?.body || data, null, 2),
           duration,
         });
-        addLog(`HTTP ${testCase.steps[0]?.parameterValues?.method || 'GET'} request completed successfully`);
+        // Support both old format (parameterValues) and new format (config)
+        const method = testCase.steps[0]?.config?.method || testCase.steps[0]?.parameterValues?.method || 'GET';
+        addLog(`HTTP ${method} request completed successfully`);
         addLog(`Status: ${data.httpResponse?.statusCode || 200}, Duration: ${duration}ms`);
       } else {
         setHttpError(data.error || 'Test execution failed');
@@ -167,7 +182,7 @@ export const TestRunner: React.FC<TestRunnerProps> = ({ testCase, scripts = [], 
     const startTime = Date.now();
 
     try {
-      const response = await fetch(`http://localhost:8090/api/v2/tests/${testCase.id}/execute`, {
+      const response = await fetch(`http://localhost:8090/api/tests/${testCase.id}/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ envId: activeEnvironment?.id }),
@@ -437,23 +452,23 @@ export const TestRunner: React.FC<TestRunnerProps> = ({ testCase, scripts = [], 
                                 </h3>
                             </div>
                             <div className="p-6">
-                                {/* Request/Command Info */}
-                                {mode === 'HTTP' && testCase.steps[0]?.parameterValues && (
+                                {/* Request/Command Info - Support both old (parameterValues) and new (config) formats */}
+                                {mode === 'HTTP' && testCase.steps[0] && (testCase.steps[0].config || testCase.steps[0].parameterValues) && (
                                     <div className="mb-4">
                                         <div className="flex items-center space-x-2 mb-2">
                                             <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-bold">
-                                                {testCase.steps[0].parameterValues.method || 'GET'}
+                                                {testCase.steps[0].config?.method || testCase.steps[0].parameterValues?.method || 'GET'}
                                             </span>
                                             <span className="font-mono text-sm text-slate-600">
-                                                {testCase.steps[0].parameterValues.url || '/api/endpoint'}
+                                                {testCase.steps[0].config?.url || testCase.steps[0].parameterValues?.url || '/api/endpoint'}
                                             </span>
                                         </div>
                                     </div>
                                 )}
-                                {mode === 'COMMAND' && testCase.steps[0]?.parameterValues && (
+                                {mode === 'COMMAND' && testCase.steps[0] && (testCase.steps[0].config || testCase.steps[0].parameterValues) && (
                                     <div className="mb-4">
                                         <div className="bg-slate-900 text-green-400 font-mono text-sm p-3 rounded">
-                                            $ {testCase.steps[0].parameterValues.command} {testCase.steps[0].parameterValues.args || ''}
+                                            $ {testCase.steps[0].config?.cmd || testCase.steps[0].parameterValues?.command} {testCase.steps[0].config?.args?.join(' ') || testCase.steps[0].parameterValues?.args || ''}
                                         </div>
                                     </div>
                                 )}

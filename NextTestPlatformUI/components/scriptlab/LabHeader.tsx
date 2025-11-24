@@ -1,12 +1,12 @@
 
 import React from 'react';
-import { GitMerge, Code, AlignLeft } from 'lucide-react';
+import { GitMerge, Code, AlignLeft, Layers } from 'lucide-react';
 import { useConfig } from '../../ConfigContext';
 import { Workflow } from '../../types';
 
 interface LabHeaderProps {
-    mode: 'workflows' | 'scripts';
-    setMode: (mode: 'workflows' | 'scripts') => void;
+    mode: 'workflows' | 'scripts' | 'suites';
+    setMode: (mode: 'workflows' | 'scripts' | 'suites') => void;
     layout: 'horizontal' | 'vertical';
     setLayout: (layout: 'horizontal' | 'vertical') => void;
     viewMode: 'visual' | 'code';
@@ -27,6 +27,9 @@ export const LabHeader: React.FC<LabHeaderProps> = ({
                  </button>
                  <button onClick={() => setMode('scripts')} className={`px-4 h-full text-sm font-medium border-b-2 flex items-center space-x-2 transition-colors ${mode === 'scripts' ? 'border-indigo-600 text-indigo-700 bg-white' : 'border-transparent text-slate-500 hover:text-indigo-600'}`}>
                      <Code size={16} /><span>{t('lab.actions')}</span>
+                 </button>
+                 <button onClick={() => setMode('suites')} className={`px-4 h-full text-sm font-medium border-b-2 flex items-center space-x-2 transition-colors ${mode === 'suites' ? 'border-indigo-600 text-indigo-700 bg-white' : 'border-transparent text-slate-500 hover:text-indigo-600'}`}>
+                     <Layers size={16} /><span>Test Suites</span>
                  </button>
              </div>
              {mode === 'workflows' && selectedWorkflow && (
