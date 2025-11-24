@@ -92,7 +92,7 @@ func main() {
 	unifiedExecutor := testcase.NewExecutorWithInjector(cfg.Test.TargetHost, nil, caseRepo, nil, variableInjector)
 
 	// Initialize workflow executor with unified executor
-	workflowExecutor := workflow.NewWorkflowExecutor(db, caseRepo, workflowRepo, unifiedExecutor, hub, variableInjector)
+	workflowExecutor := workflow.NewWorkflowExecutor(db, caseRepo, workflowRepo, unifiedExecutor, hub, variableInjector, actionTemplateRepo)
 
 	// Initialize executor with variable injection (for test service)
 	executor := testcase.NewExecutorWithInjector(cfg.Test.TargetHost, nil, caseRepo, nil, variableInjector)

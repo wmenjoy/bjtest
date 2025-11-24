@@ -33,13 +33,15 @@ type ExecutionParams struct {
 
 // WorkflowExecutorImpl implements WorkflowExecutor
 type WorkflowExecutorImpl struct {
-	db               *gorm.DB
-	actionRegistry   *ActionRegistry
-	testCaseRepo     TestCaseRepository
-	workflowRepo     WorkflowRepository
-	unifiedExecutor  *testcase.UnifiedTestExecutor
-	hub              *websocket.Hub
-	variableInjector VariableInjector
+	db                 *gorm.DB
+	actionRegistry     *ActionRegistry
+	testCaseRepo       TestCaseRepository
+	workflowRepo       WorkflowRepository
+	unifiedExecutor    *testcase.UnifiedTestExecutor
+	hub                *websocket.Hub
+	variableInjector   VariableInjector
+	actionTemplateRepo ActionTemplateRepository
+	variableResolver   *VariableResolver
 }
 
 // NewWorkflowExecutor creates a new workflow executor
@@ -50,15 +52,18 @@ func NewWorkflowExecutor(
 	unifiedExecutor *testcase.UnifiedTestExecutor,
 	hub *websocket.Hub,
 	variableInjector VariableInjector,
+	actionTemplateRepo ActionTemplateRepository,
 ) *WorkflowExecutorImpl {
 	executor := &WorkflowExecutorImpl{
-		db:               db,
-		actionRegistry:   NewActionRegistry(),
-		testCaseRepo:     testCaseRepo,
-		workflowRepo:     workflowRepo,
-		unifiedExecutor:  unifiedExecutor,
-		hub:              hub,
-		variableInjector: variableInjector,
+		db:                 db,
+		actionRegistry:     NewActionRegistry(),
+		testCaseRepo:       testCaseRepo,
+		workflowRepo:       workflowRepo,
+		unifiedExecutor:    unifiedExecutor,
+		hub:                hub,
+		variableInjector:   variableInjector,
+		actionTemplateRepo: actionTemplateRepo,
+		variableResolver:   NewVariableResolver(),
 	}
 
 	// Register built-in actions
@@ -214,6 +219,131 @@ func (e *WorkflowExecutorImpl) parseWorkflowDefinition(workflowID string, workfl
 	return &workflow, nil
 }
 
+// getActionTemplate retrieves an action template by ID and optional version
+func (e *WorkflowExecutorImpl) getActionTemplate(templateID string, version string) (*models.ActionTemplate, error) {
+	if e.actionTemplateRepo == nil {
+		return nil, fmt.Errorf("action template repository not configured")
+	}
+
+	// TODO: Version filtering can be added here if needed
+	// For now, we just get by templateID
+	template, err := e.actionTemplateRepo.GetByTemplateID(context.Background(), templateID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load action template: %w", err)
+	}
+
+	return template, nil
+}
+
+// mergeConfig merges template configuration with step inputs
+// Template ConfigTemplate provides base configuration
+// Step Inputs override specific parameters with variable interpolation
+func (e *WorkflowExecutorImpl) mergeConfig(
+	templateConfig models.JSONB,
+	inputs map[string]string,
+	ctx *ExecutionContext,
+) map[string]interface{} {
+	merged := make(map[string]interface{})
+
+	// Step 1: Copy template configuration as base
+	if templateConfig != nil {
+		for k, v := range templateConfig {
+			merged[k] = v
+		}
+	}
+
+	// Step 2: Apply inputs with variable resolution
+	if inputs != nil {
+		for paramName, paramValue := range inputs {
+			// Resolve variables in parameter value
+			resolvedValue := e.variableResolver.Resolve(paramValue, ctx)
+			merged[paramName] = resolvedValue
+		}
+	}
+
+	return merged
+}
+
+// parseOutputDefinitions parses JSONArray of outputs into ActionOutput structs
+func (e *WorkflowExecutorImpl) parseOutputDefinitions(outputsJSON models.JSONArray) []ActionOutput {
+	if outputsJSON == nil {
+		return nil
+	}
+
+	var outputs []ActionOutput
+
+	// Convert JSONArray to []ActionOutput
+	for _, item := range outputsJSON {
+		if outputMap, ok := item.(map[string]interface{}); ok {
+			output := ActionOutput{}
+
+			if name, ok := outputMap["name"].(string); ok {
+				output.Name = name
+			}
+			if path, ok := outputMap["path"].(string); ok {
+				output.Path = path
+			}
+			if desc, ok := outputMap["description"].(string); ok {
+				output.Description = desc
+			}
+
+			outputs = append(outputs, output)
+		}
+	}
+
+	return outputs
+}
+
+// extractOutputsFromTemplate extracts outputs from action result using template definitions
+// Uses JSONPath to extract values and maps them to workflow variables
+func (e *WorkflowExecutorImpl) extractOutputsFromTemplate(
+	result *ActionResult,
+	outputDefs []ActionOutput,
+	outputMappings map[string]string,
+	ctx *ExecutionContext,
+	stepID string,
+) {
+	if result == nil || result.Output == nil {
+		return
+	}
+
+	// Convert output to JSON for gjson querying
+	outputJSON, err := json.Marshal(result.Output)
+	if err != nil {
+		ctx.Logger.Warn(stepID, fmt.Sprintf("Failed to marshal output for extraction: %v", err))
+		return
+	}
+
+	// Extract each defined output
+	for _, outputDef := range outputDefs {
+		// Use gjson to extract value from result using JSONPath
+		extractedValue := gjson.GetBytes(outputJSON, outputDef.Path)
+
+		if !extractedValue.Exists() {
+			ctx.Logger.Warn(stepID, fmt.Sprintf("Output path '%s' not found in result", outputDef.Path))
+			continue
+		}
+
+		// Determine target variable name
+		// Priority: outputMappings > outputDef.Name
+		varName := outputDef.Name
+		if outputMappings != nil {
+			if mappedName, exists := outputMappings[outputDef.Name]; exists {
+				varName = mappedName
+			}
+		}
+
+		// Track variable change
+		oldValue := ctx.Variables[varName]
+		newValue := extractedValue.Value()
+		ctx.Variables[varName] = newValue
+
+		// Log variable tracking
+		ctx.VarTracker.Track(stepID, varName, oldValue, newValue, "update")
+		ctx.Logger.Info(stepID, fmt.Sprintf("Extracted output: %s = %v", varName, newValue))
+	}
+}
+
 // validateWorkflow checks for cycles and missing dependencies
 func (e *WorkflowExecutorImpl) validateWorkflow(workflow *WorkflowDefinition) error {
 	// Check all dependencies exist
@@ -361,7 +491,9 @@ func (e *WorkflowExecutorImpl) executeLayer(ctx *ExecutionContext, layer []strin
 	return nil
 }
 
-// executeStep executes a single step
+// executeStep executes a single step with dual-mode support
+// Mode 1: Reference Action Template (actionTemplateId + inputs)
+// Mode 2: Inline Configuration (config)
 func (e *WorkflowExecutorImpl) executeStep(ctx *ExecutionContext, step *WorkflowStep) error {
 	ctx.Logger.Info(step.ID, fmt.Sprintf("Starting step: %s", step.Name))
 
@@ -386,8 +518,42 @@ func (e *WorkflowExecutorImpl) executeStep(ctx *ExecutionContext, step *Workflow
 	stepExec.InputData = models.JSONB{"input": step.Input, "config": step.Config}
 	e.db.Create(stepExec)
 
-	// Interpolate variables in step config
-	interpolatedConfig, err := e.interpolateConfig(step.Config, ctx.Variables, ctx.StepOutputs)
+	// === Step 1: Determine final configuration ===
+	var finalConfig map[string]interface{}
+	var outputDefinitions []ActionOutput
+
+	if step.ActionTemplateID != "" {
+		// Mode 1: Reference Action Template
+		template, err := e.getActionTemplate(step.ActionTemplateID, step.ActionVersion)
+		if err != nil {
+			stepExec.Status = "failed"
+			stepExec.Error = fmt.Sprintf("action template not found: %s - %v", step.ActionTemplateID, err)
+			stepExec.EndTime = time.Now()
+			stepExec.Duration = int(stepExec.EndTime.Sub(stepExec.StartTime).Milliseconds())
+			e.db.Save(stepExec)
+			return fmt.Errorf("action template not found: %s - %w", step.ActionTemplateID, err)
+		}
+
+		// Merge template config with step inputs
+		finalConfig = e.mergeConfig(template.ConfigTemplate, step.Inputs, ctx)
+
+		// Parse output definitions from template
+		outputDefinitions = e.parseOutputDefinitions(template.Outputs)
+
+		// Override step type with template type if not specified
+		if step.Type == "" || step.Type == "action-template" {
+			step.Type = template.Type
+		}
+
+		ctx.Logger.Info(step.ID, fmt.Sprintf("Using action template: %s (type: %s)", template.Name, template.Type))
+	} else {
+		// Mode 2: Inline Configuration
+		finalConfig = step.Config
+		ctx.Logger.Info(step.ID, "Using inline configuration")
+	}
+
+	// Interpolate variables in final config
+	interpolatedConfig, err := e.interpolateConfig(finalConfig, ctx.Variables, ctx.StepOutputs)
 	if err != nil {
 		stepExec.Status = "failed"
 		stepExec.Error = fmt.Sprintf("variable interpolation failed: %v", err)
@@ -398,7 +564,7 @@ func (e *WorkflowExecutorImpl) executeStep(ctx *ExecutionContext, step *Workflow
 	}
 	step.Config = interpolatedConfig
 
-	// Get action
+	// === Step 2: Get and execute action ===
 	action, err := e.getActionForStep(step)
 	if err != nil {
 		stepExec.Status = "failed"
@@ -467,7 +633,7 @@ func (e *WorkflowExecutorImpl) executeStep(ctx *ExecutionContext, step *Workflow
 		return fmt.Errorf("step execution failed")
 	}
 
-	// Success - save output
+	// === Step 3: Extract outputs ===
 	stepExec.Status = "success"
 	if result != nil && result.Output != nil {
 		stepExec.OutputData = models.JSONB(result.Output)
@@ -475,8 +641,12 @@ func (e *WorkflowExecutorImpl) executeStep(ctx *ExecutionContext, step *Workflow
 		// Save to step outputs
 		ctx.StepOutputs[step.ID] = result.Output
 
-		// Map output variables
-		if step.Output != nil {
+		// Extract outputs based on mode
+		if len(outputDefinitions) > 0 {
+			// Mode 1: Extract from template definitions
+			e.extractOutputsFromTemplate(result, outputDefinitions, step.Outputs, ctx, step.ID)
+		} else if step.Output != nil {
+			// Mode 2: Extract from step output mappings (legacy)
 			for varName, outputPath := range step.Output {
 				if value, exists := result.Output[outputPath]; exists {
 					oldValue := ctx.Variables[varName]

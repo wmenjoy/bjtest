@@ -37,9 +37,9 @@ CREATE INDEX idx_users_deleted_at ON users(deleted_at);
 
 -- Insert default roles
 INSERT OR IGNORE INTO roles (role_id, name, description, permission_codes) VALUES
-('admin', 'Administrator', 'Full system access', '["VIEW_DASHBOARD","VIEW_CASES","VIEW_AUTOMATION","VIEW_LIBRARY","VIEW_DATABASE","VIEW_HISTORY","VIEW_ADMIN","VIEW_SETTINGS","VIEW_DOCS","CREATE_CASE","EDIT_CASE","DELETE_CASE","EXECUTE_RUN","MANAGE_SCRIPTS","MANAGE_USERS","MANAGE_PROJECTS"]'),
-('editor', 'Editor', 'Can manage test cases and execute runs', '["VIEW_DASHBOARD","VIEW_CASES","VIEW_AUTOMATION","VIEW_LIBRARY","VIEW_DATABASE","VIEW_HISTORY","VIEW_DOCS","CREATE_CASE","EDIT_CASE","DELETE_CASE","EXECUTE_RUN","MANAGE_SCRIPTS"]'),
-('viewer', 'Viewer', 'Read-only access to dashboards and reports', '["VIEW_DASHBOARD","VIEW_CASES","VIEW_AUTOMATION","VIEW_LIBRARY","VIEW_DATABASE","VIEW_HISTORY","VIEW_DOCS"]');
+('admin', 'Administrator', 'Full system access', '["VIEW_DASHBOARD","VIEW_APIS","VIEW_CASES","VIEW_AUTOMATION","VIEW_LIBRARY","VIEW_DATABASE","VIEW_HISTORY","VIEW_ADMIN","VIEW_SETTINGS","VIEW_DOCS","CREATE_CASE","EDIT_CASE","DELETE_CASE","EXECUTE_RUN","MANAGE_SCRIPTS","MANAGE_USERS","MANAGE_PROJECTS"]'),
+('editor', 'Editor', 'Can manage test cases and execute runs', '["VIEW_DASHBOARD","VIEW_APIS","VIEW_CASES","VIEW_AUTOMATION","VIEW_LIBRARY","VIEW_DATABASE","VIEW_HISTORY","VIEW_DOCS","CREATE_CASE","EDIT_CASE","DELETE_CASE","EXECUTE_RUN","MANAGE_SCRIPTS"]'),
+('viewer', 'Viewer', 'Read-only access to dashboards and reports', '["VIEW_DASHBOARD","VIEW_APIS","VIEW_CASES","VIEW_AUTOMATION","VIEW_LIBRARY","VIEW_DATABASE","VIEW_HISTORY","VIEW_DOCS"]');
 
 -- Insert default admin user
 INSERT OR IGNORE INTO users (user_id, name, email, role_id, org_id, status, avatar) VALUES

@@ -90,7 +90,7 @@ func TestWorkflowExecutor_SimpleWorkflow(t *testing.T) {
 	go hub.Run()
 
 	// Create workflow executor
-	executor := NewWorkflowExecutor(db, testCaseRepo, workflowRepo, unifiedExecutor, hub, nil)
+	executor := NewWorkflowExecutor(db, testCaseRepo, workflowRepo, unifiedExecutor, hub, nil, nil)
 
 	// Define a simple workflow with command steps
 	workflowDef := map[string]interface{}{
@@ -136,7 +136,7 @@ func TestWorkflowExecutor_ParallelSteps(t *testing.T) {
 	testCaseRepo := repository.NewWorkflowTestCaseRepository(db)
 	workflowRepo := repository.NewWorkflowRepository(db)
 	unifiedExecutor := testcase.NewExecutor("http://localhost:8080")
-	executor := NewWorkflowExecutor(db, testCaseRepo, workflowRepo, unifiedExecutor, nil, nil)
+	executor := NewWorkflowExecutor(db, testCaseRepo, workflowRepo, unifiedExecutor, nil, nil, nil)
 
 	// Define workflow with parallel steps (no dependencies)
 	workflowDef := map[string]interface{}{
@@ -186,7 +186,7 @@ func TestWorkflowExecutor_SequentialSteps(t *testing.T) {
 	testCaseRepo := repository.NewWorkflowTestCaseRepository(db)
 	workflowRepo := repository.NewWorkflowRepository(db)
 	unifiedExecutor := testcase.NewExecutor("http://localhost:8080")
-	executor := NewWorkflowExecutor(db, testCaseRepo, workflowRepo, unifiedExecutor, nil, nil)
+	executor := NewWorkflowExecutor(db, testCaseRepo, workflowRepo, unifiedExecutor, nil, nil, nil)
 
 	// Define workflow with sequential steps
 	workflowDef := map[string]interface{}{
@@ -238,7 +238,7 @@ func TestWorkflowExecutor_CycleDetection(t *testing.T) {
 	testCaseRepo := repository.NewWorkflowTestCaseRepository(db)
 	workflowRepo := repository.NewWorkflowRepository(db)
 	unifiedExecutor := testcase.NewExecutor("http://localhost:8080")
-	executor := NewWorkflowExecutor(db, testCaseRepo, workflowRepo, unifiedExecutor, nil, nil)
+	executor := NewWorkflowExecutor(db, testCaseRepo, workflowRepo, unifiedExecutor, nil, nil, nil)
 
 	// Define workflow with circular dependency
 	workflowDef := map[string]interface{}{
@@ -288,7 +288,7 @@ func TestWorkflowExecutor_StepFailure(t *testing.T) {
 	testCaseRepo := repository.NewWorkflowTestCaseRepository(db)
 	workflowRepo := repository.NewWorkflowRepository(db)
 	unifiedExecutor := testcase.NewExecutor("http://localhost:8080")
-	executor := NewWorkflowExecutor(db, testCaseRepo, workflowRepo, unifiedExecutor, nil, nil)
+	executor := NewWorkflowExecutor(db, testCaseRepo, workflowRepo, unifiedExecutor, nil, nil, nil)
 
 	// Define workflow with command that doesn't exist
 	workflowDef := map[string]interface{}{
@@ -320,7 +320,7 @@ func TestWorkflowExecutor_ContinueOnError(t *testing.T) {
 	testCaseRepo := repository.NewWorkflowTestCaseRepository(db)
 	workflowRepo := repository.NewWorkflowRepository(db)
 	unifiedExecutor := testcase.NewExecutor("http://localhost:8080")
-	executor := NewWorkflowExecutor(db, testCaseRepo, workflowRepo, unifiedExecutor, nil, nil)
+	executor := NewWorkflowExecutor(db, testCaseRepo, workflowRepo, unifiedExecutor, nil, nil, nil)
 
 	// Define workflow with failing step that continues
 	workflowDef := map[string]interface{}{
@@ -363,7 +363,7 @@ func TestWorkflowExecutor_RetryLogic(t *testing.T) {
 	testCaseRepo := repository.NewWorkflowTestCaseRepository(db)
 	workflowRepo := repository.NewWorkflowRepository(db)
 	unifiedExecutor := testcase.NewExecutor("http://localhost:8080")
-	executor := NewWorkflowExecutor(db, testCaseRepo, workflowRepo, unifiedExecutor, nil, nil)
+	executor := NewWorkflowExecutor(db, testCaseRepo, workflowRepo, unifiedExecutor, nil, nil, nil)
 
 	// Define workflow with retry
 	workflowDef := map[string]interface{}{
@@ -416,7 +416,7 @@ func TestWorkflowExecutor_TestCaseAction(t *testing.T) {
 	testCaseRepo := repository.NewWorkflowTestCaseRepository(db)
 	workflowRepo := repository.NewWorkflowRepository(db)
 	unifiedExecutor := testcase.NewExecutor("http://localhost:8080")
-	executor := NewWorkflowExecutor(db, testCaseRepo, workflowRepo, unifiedExecutor, nil, nil)
+	executor := NewWorkflowExecutor(db, testCaseRepo, workflowRepo, unifiedExecutor, nil, nil, nil)
 
 	// Define workflow that references test case
 	workflowDef := map[string]interface{}{
@@ -447,7 +447,7 @@ func TestWorkflowExecutor_StepLogging(t *testing.T) {
 	testCaseRepo := repository.NewWorkflowTestCaseRepository(db)
 	workflowRepo := repository.NewWorkflowRepository(db)
 	unifiedExecutor := testcase.NewExecutor("http://localhost:8080")
-	executor := NewWorkflowExecutor(db, testCaseRepo, workflowRepo, unifiedExecutor, nil, nil)
+	executor := NewWorkflowExecutor(db, testCaseRepo, workflowRepo, unifiedExecutor, nil, nil, nil)
 
 	workflowDef := map[string]interface{}{
 		"name": "logging-test",
@@ -481,7 +481,7 @@ func TestWorkflowExecutor_StepExecutionRecords(t *testing.T) {
 	testCaseRepo := repository.NewWorkflowTestCaseRepository(db)
 	workflowRepo := repository.NewWorkflowRepository(db)
 	unifiedExecutor := testcase.NewExecutor("http://localhost:8080")
-	executor := NewWorkflowExecutor(db, testCaseRepo, workflowRepo, unifiedExecutor, nil, nil)
+	executor := NewWorkflowExecutor(db, testCaseRepo, workflowRepo, unifiedExecutor, nil, nil, nil)
 
 	workflowDef := map[string]interface{}{
 		"name": "execution-tracking-test",

@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS action_templates (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     template_id VARCHAR(255) NOT NULL,
     tenant_id VARCHAR(100),
+    project_id VARCHAR(100),
 
     -- Basic Info
     name VARCHAR(255) NOT NULL,
@@ -40,6 +41,7 @@ CREATE TABLE IF NOT EXISTS action_templates (
 
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_action_templates_tenant_id ON action_templates(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_action_templates_project_id ON action_templates(project_id);
 CREATE INDEX IF NOT EXISTS idx_action_templates_category ON action_templates(category);
 CREATE INDEX IF NOT EXISTS idx_action_templates_type ON action_templates(type);
 CREATE INDEX IF NOT EXISTS idx_action_templates_scope ON action_templates(scope);

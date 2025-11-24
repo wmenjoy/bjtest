@@ -82,20 +82,21 @@ export const TestCaseManager: React.FC<TestCaseManagerProps> = ({ cases, folders
     }
   };
 
-  const handleAddFolder = async (type: 'project' | 'module') => {
+  const handleAddFolder = async (type: 'service' | 'module') => {
       const name = prompt(`Enter ${type} name:`);
       if(name) {
           try {
             await onAddFolder({
                 id: `f-${Date.now()}`,
                 name,
-                parentId: selectedFolderId === 'root' && type === 'project' ? 'root' : selectedFolderId,
+                parentId: selectedFolderId === 'root' && type === 'service' ? 'root' : selectedFolderId,
                 type: 'folder',
-                projectId
+                projectId,
+                folderType: type  // Add folder type metadata
             });
-            setToast({ message: 'Folder created successfully!', type: 'success' });
+            setToast({ message: `${type.charAt(0).toUpperCase() + type.slice(1)} created successfully!`, type: 'success' });
           } catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to create folder';
+            const message = err instanceof Error ? err.message : `Failed to create ${type}`;
             setToast({ message, type: 'error' });
           }
       }
