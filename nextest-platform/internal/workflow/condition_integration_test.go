@@ -66,6 +66,7 @@ func TestConditionalExecution_BasicSkip(t *testing.T) {
 		nil, // unifiedExec - HTTP action will use mock mode
 		nil, // hub - not needed for this test
 		nil, // variableInjector
+		nil, // actionTemplateRepo
 	)
 
 	// Execute workflow
@@ -178,6 +179,7 @@ func TestConditionalExecution_MultipleConditions(t *testing.T) {
 		nil, // unifiedExecutor - not needed for this test
 		nil, // hub - not needed for this test
 		nil, // variableInjector
+		nil, // actionTemplateRepo
 	)
 
 	result, err := executor.Execute("test-workflow-002", workflowDef, nil)
@@ -282,6 +284,7 @@ func TestConditionalExecution_NodeOutputReference(t *testing.T) {
 		nil, // unifiedExecutor - not needed for this test
 		nil, // hub - not needed for this test
 		nil, // variableInjector
+		nil, // actionTemplateRepo
 	)
 
 	result, err := executor.Execute("test-workflow-004", workflowDef, nil)
@@ -347,6 +350,7 @@ func TestConditionalExecution_ComplexExpression(t *testing.T) {
 		nil, // unifiedExecutor - not needed for this test
 		nil, // hub - not needed for this test
 		nil, // variableInjector
+		nil, // actionTemplateRepo
 	)
 
 	result, err := executor.Execute("test-workflow-complex", workflowDef, nil)
@@ -426,6 +430,7 @@ func TestConditionalExecution_SkippedStepsRecorded(t *testing.T) {
 		nil, // unifiedExecutor - not needed for this test
 		nil, // hub - not needed for this test
 		nil, // variableInjector
+		nil, // actionTemplateRepo
 	)
 
 	result, err := executor.Execute("test-skip-record", workflowDef, nil)

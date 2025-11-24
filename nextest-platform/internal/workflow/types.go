@@ -1,6 +1,7 @@
 package workflow
 
 import (
+	"context"
 	"time"
 
 	"test-management-service/internal/models"
@@ -69,6 +70,18 @@ type WorkflowRepository interface {
 	GetWorkflow(workflowID string) (*models.Workflow, error)
 }
 
+// ActionTemplateRepository for loading action templates
+type ActionTemplateRepository interface {
+	GetByTemplateID(ctx context.Context, templateID string) (*models.ActionTemplate, error)
+}
+
+// ActionOutput defines output extraction from action results
+type ActionOutput struct {
+	Name        string `json:"name"`        // Output variable name
+	Path        string `json:"path"`        // JSONPath to extract from result
+	Description string `json:"description"` // Human-readable description
+}
+
 // ExecutionContext tracks workflow execution state
 type ExecutionContext struct {
 	RunID       string
@@ -104,6 +117,12 @@ type WorkflowStep struct {
 	Input     map[string]interface{} `json:"input,omitempty"`
 	Output    map[string]string      `json:"output,omitempty"`
 	DependsOn []string               `json:"dependsOn,omitempty"`
+
+	// === Action Template Support ===
+	ActionTemplateID string                 `json:"actionTemplateId,omitempty"` // Reference to Action Template
+	ActionVersion    string                 `json:"actionVersion,omitempty"`    // Optional version constraint
+	Inputs           map[string]string      `json:"inputs,omitempty"`           // Parameter values for template
+	Outputs          map[string]string      `json:"outputs,omitempty"`          // Output variable mappings
 
 	// === 条件执行 ===
 	When      string                 `json:"when,omitempty"` // Condition expression

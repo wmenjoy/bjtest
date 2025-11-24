@@ -41,6 +41,7 @@ func TestLoop_ForEach_Basic(t *testing.T) {
 		nil, // unifiedExec - HTTP action will use mock mode
 		nil, // hub - not needed for this test
 		nil, // variableInjector
+		nil, // actionTemplateRepo
 	)
 
 	result, err := executor.Execute("test-loop-001", workflowDef, nil)
@@ -118,6 +119,7 @@ func TestLoop_While_Pagination(t *testing.T) {
 		nil, // unifiedExec - HTTP action will use mock mode
 		nil, // hub - not needed for this test
 		nil, // variableInjector
+		nil, // actionTemplateRepo
 	)
 
 	result, err := executor.Execute("test-loop-003", workflowDef, nil)
@@ -175,6 +177,7 @@ func TestLoop_ForEach_Parallel(t *testing.T) {
 		nil, // unifiedExec - HTTP action will use mock mode
 		nil, // hub - not needed for this test
 		nil, // variableInjector
+		nil, // actionTemplateRepo
 	)
 
 	startTime := time.Now()
@@ -235,6 +238,7 @@ func TestLoop_BuiltinVariables(t *testing.T) {
 		nil, // unifiedExec - HTTP action will use mock mode
 		nil, // hub - not needed for this test
 		nil, // variableInjector
+		nil, // actionTemplateRepo
 	)
 
 	result, err := executor.Execute("test-loop-vars", workflowDef, nil)
@@ -299,6 +303,7 @@ func TestLoop_MaxIterations(t *testing.T) {
 		nil, // unifiedExec - HTTP action will use mock mode
 		nil, // hub - not needed for this test
 		nil, // variableInjector
+		nil, // actionTemplateRepo
 	)
 
 	result, err := executor.Execute("test-max-iter", workflowDef, nil)
@@ -368,6 +373,7 @@ func TestLoop_WithConditionalSkip(t *testing.T) {
 		nil, // unifiedExec - HTTP action will use mock mode
 		nil, // hub - not needed for this test
 		nil, // variableInjector
+		nil, // actionTemplateRepo
 	)
 
 	result, err := executor.Execute("test-loop-cond", workflowDef, nil)
@@ -416,6 +422,7 @@ func TestLoop_EmptyArray(t *testing.T) {
 		nil, // unifiedExec - HTTP action will use mock mode
 		nil, // hub - not needed for this test
 		nil, // variableInjector
+		nil, // actionTemplateRepo
 	)
 
 	result, err := executor.Execute("test-empty-loop", workflowDef, nil)

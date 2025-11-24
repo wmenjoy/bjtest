@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TestStep, LoopConfig, BranchConfig } from '../../../types';
 import {
   RefreshCw,
@@ -12,11 +12,17 @@ import {
   Terminal,
   CheckCircle,
   Layers,
-  GripVertical
+  GripVertical,
+  Package,
+  Settings
 } from 'lucide-react';
 import { LoopConfigEditor } from './LoopConfigEditor';
 import { BranchConfigEditor } from './BranchConfigEditor';
 import { ChildStepList } from './ChildStepList';
+import { ActionTemplateSelector } from './ActionTemplateSelector';
+import { TemplateConfigSection } from './TemplateConfigSection';
+import { InlineConfigSection } from './InlineConfigSection';
+import { actionTemplateApi, ActionTemplate } from '../../../services/api/actionTemplateApi';
 
 interface StepCardProps {
   step: TestStep;
@@ -65,6 +71,18 @@ export const StepCard: React.FC<StepCardProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<ActionTemplate | null>(null);
+
+  // Load template details if actionTemplateId is set
+  useEffect(() => {
+    if (step.linkedScriptId && !selectedTemplate) {
+      // linkedScriptId is being used as actionTemplateId for now
+      actionTemplateApi.getTemplate(step.linkedScriptId)
+        .then(setSelectedTemplate)
+        .catch(console.error);
+    }
+  }, [step.linkedScriptId, selectedTemplate]);
 
   // Calculate left margin based on depth
   const marginLeft = depth * 24;
@@ -82,6 +100,55 @@ export const StepCard: React.FC<StepCardProps> = ({
   // Update step field
   const updateField = <K extends keyof TestStep>(field: K, value: TestStep[K]) => {
     onChange({ ...step, [field]: value });
+  };
+
+  // Handle template selection
+  const handleTemplateSelect = (template: ActionTemplate) => {
+    setSelectedTemplate(template);
+
+    // Initialize inputs from template parameters
+    const initialInputs: Record<string, string> = {};
+    template.parameters?.forEach((param: any) => {
+      initialInputs[param.name] = param.defaultValue || '';
+    });
+
+    // Update step with template reference
+    onChange({
+      ...step,
+      linkedScriptId: template.templateId, // Using linkedScriptId as actionTemplateId
+      type: template.type,
+      name: step.name || template.name,
+      inputs: initialInputs,
+      outputs: {},
+      config: template.configTemplate || {}
+    });
+
+    setShowTemplateSelector(false);
+
+    // Record usage
+    actionTemplateApi.recordUsage(template.templateId).catch(console.error);
+  };
+
+  // Mode detection
+  const isTemplateMode = !!step.actionTemplateId || !!step.linkedScriptId;
+  const isInlineMode = !isTemplateMode;
+
+  // Switch to template mode
+  const switchToTemplateMode = () => {
+    setShowTemplateSelector(true);
+  };
+
+  // Switch to inline mode (unlink template)
+  const switchToInlineMode = () => {
+    setSelectedTemplate(null);
+    onChange({
+      ...step,
+      linkedScriptId: undefined,
+      actionTemplateId: undefined,
+      actionVersion: undefined,
+      inputs: undefined,
+      // Keep config for inline mode
+    });
   };
 
   // Handle loop config change
@@ -195,6 +262,20 @@ export const StepCard: React.FC<StepCardProps> = ({
                       {step.name || step.summary || 'Unnamed Step'}
                     </span>
                   )}
+
+                  {/* Mode indicator badge */}
+                  {isTemplateMode && (
+                    <span className="text-[10px] px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-medium flex items-center space-x-1">
+                      <Package size={10} />
+                      <span>Template</span>
+                    </span>
+                  )}
+                  {isInlineMode && (
+                    <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full font-medium flex items-center space-x-1">
+                      <Settings size={10} />
+                      <span>Inline</span>
+                    </span>
+                  )}
                 </div>
 
                 {/* Step Badges */}
@@ -293,263 +374,128 @@ export const StepCard: React.FC<StepCardProps> = ({
         {/* Expanded Content */}
         {isExpanded && (
           <div className="border-t border-slate-100 p-4 space-y-4 bg-slate-50/50">
-            {/* Basic Step Configuration */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
-                  Step Type
-                </label>
-                <select
-                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:border-blue-400 outline-none"
-                  value={step.type || 'http'}
-                  onChange={(e) => updateField('type', e.target.value)}
-                >
-                  <option value="http">HTTP Request</option>
-                  <option value="command">Command</option>
-                  <option value="assert">Assertion</option>
-                  <option value="branch">Branch</option>
-                  <option value="group">Group</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
-                  Condition (optional)
-                </label>
-                <input
-                  type="text"
-                  className="w-full px-3 py-2 text-sm font-mono border border-slate-200 rounded-lg bg-white focus:border-blue-400 outline-none"
-                  placeholder="{{status}} == 200"
-                  value={step.condition || ''}
-                  onChange={(e) => updateField('condition', e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* HTTP Config (if type is http) */}
-            {(step.type === 'http' || !step.type) && (
-              <div className="space-y-3">
-                <div className="flex space-x-3">
-                  <div className="w-28">
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
-                      Method
-                    </label>
-                    <select
-                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:border-blue-400 outline-none font-semibold"
-                      value={step.config?.method || 'GET'}
-                      onChange={(e) =>
-                        updateField('config', { ...step.config, method: e.target.value })
-                      }
-                    >
-                      <option value="GET">GET</option>
-                      <option value="POST">POST</option>
-                      <option value="PUT">PUT</option>
-                      <option value="DELETE">DELETE</option>
-                      <option value="PATCH">PATCH</option>
-                    </select>
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
-                      URL
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full px-3 py-2 text-sm font-mono border border-slate-200 rounded-lg bg-white focus:border-blue-400 outline-none"
-                      placeholder="/api/users or {{baseUrl}}/users"
-                      value={step.config?.url || ''}
-                      onChange={(e) =>
-                        updateField('config', { ...step.config, url: e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Command Config (if type is command) */}
-            {step.type === 'command' && (
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
-                    Command
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 text-sm font-mono border border-slate-200 rounded-lg bg-white focus:border-blue-400 outline-none"
-                    placeholder="echo, curl, python, etc."
-                    value={step.config?.cmd || ''}
-                    onChange={(e) =>
-                      updateField('config', { ...step.config, cmd: e.target.value })
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
-                    Arguments (one per line or space-separated)
-                  </label>
-                  <textarea
-                    className="w-full px-3 py-2 text-sm font-mono border border-slate-200 rounded-lg bg-white focus:border-blue-400 outline-none resize-none"
-                    placeholder="--flag value&#10;-o output.txt&#10;{{variable}}"
-                    rows={3}
-                    value={Array.isArray(step.config?.args) ? step.config.args.join('\n') : (step.config?.args || '')}
-                    onChange={(e) => {
-                      const args = e.target.value.split('\n').filter(a => a.trim());
-                      updateField('config', { ...step.config, args });
-                    }}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
-                      Working Directory (optional)
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full px-3 py-2 text-sm font-mono border border-slate-200 rounded-lg bg-white focus:border-blue-400 outline-none"
-                      placeholder="/path/to/dir or {{workDir}}"
-                      value={step.config?.workDir || ''}
-                      onChange={(e) =>
-                        updateField('config', { ...step.config, workDir: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
-                      Timeout (seconds)
-                    </label>
-                    <input
-                      type="number"
-                      className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:border-blue-400 outline-none"
-                      placeholder="30"
-                      min={0}
-                      value={step.config?.timeout || ''}
-                      onChange={(e) =>
-                        updateField('config', { ...step.config, timeout: parseInt(e.target.value) || undefined })
-                      }
-                    />
-                  </div>
-                </div>
-                {/* Command Preview */}
-                {(step.config?.cmd || step.config?.args) && (
-                  <div className="bg-slate-900 text-green-400 font-mono text-sm p-3 rounded-lg overflow-x-auto">
-                    <span className="text-slate-500">$ </span>
-                    {step.config?.cmd || 'command'} {Array.isArray(step.config?.args) ? step.config.args.join(' ') : ''}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Outputs Configuration */}
-            <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
-                Output Variables (JSON path to variable name)
+            {/* Mode Selector (prominent at top) */}
+            <div className="bg-white border border-slate-200 rounded-lg p-3">
+              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">
+                Configuration Mode
               </label>
-              <div className="text-xs text-slate-400 mb-2">
-                Map response paths to variables, e.g., response.body.users -{'>'} userList
-              </div>
-              <div className="space-y-2">
-                {Object.entries(step.outputs || {}).map(([path, varName], idx) => (
-                  <div key={idx} className="flex items-center space-x-2">
-                    <input
-                      type="text"
-                      className="flex-1 px-2 py-1.5 text-xs font-mono border border-slate-200 rounded bg-white"
-                      value={path}
-                      placeholder="response.body.data"
-                      onChange={(e) => {
-                        const newOutputs = { ...step.outputs };
-                        delete newOutputs[path];
-                        newOutputs[e.target.value] = varName;
-                        updateField('outputs', newOutputs);
-                      }}
-                    />
-                    <span className="text-slate-400">-{'>'}</span>
-                    <input
-                      type="text"
-                      className="w-32 px-2 py-1.5 text-xs font-mono border border-slate-200 rounded bg-white text-cyan-600"
-                      value={varName}
-                      placeholder="varName"
-                      onChange={(e) => {
-                        updateField('outputs', { ...step.outputs, [path]: e.target.value });
-                      }}
-                    />
-                    <button
-                      type="button"
-                      className="p-1 text-slate-400 hover:text-red-500"
-                      onClick={() => {
-                        const newOutputs = { ...step.outputs };
-                        delete newOutputs[path];
-                        updateField('outputs', newOutputs);
-                      }}
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                ))}
+              <div className="flex space-x-2">
                 <button
                   type="button"
-                  className="text-xs text-blue-600 hover:underline"
-                  onClick={() =>
-                    updateField('outputs', { ...step.outputs, '': '' })
-                  }
+                  onClick={switchToTemplateMode}
+                  className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 text-sm font-medium rounded-lg border transition-all ${
+                    isTemplateMode
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-md'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300 hover:bg-blue-50'
+                  }`}
                 >
-                  + Add output mapping
+                  <Package size={16} />
+                  <span>Use Action Template</span>
+                  {isTemplateMode && <span className="text-xs">(Active)</span>}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={switchToInlineMode}
+                  className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 text-sm font-medium rounded-lg border transition-all ${
+                    isInlineMode
+                      ? 'bg-slate-600 text-white border-slate-600 shadow-md'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                  }`}
+                >
+                  <Settings size={16} />
+                  <span>Custom Configuration</span>
+                  {isInlineMode && <span className="text-xs">(Active)</span>}
                 </button>
               </div>
             </div>
 
-            {/* Loop Configuration */}
-            <LoopConfigEditor
-              config={step.loop}
-              onChange={handleLoopChange}
-              variables={variables}
-            />
-
-            {/* Loop Body (if loop enabled) */}
-            {hasLoop && (
-              <div className="mt-3">
-                <ChildStepList
-                  children={step.children || []}
-                  onChange={handleChildrenChange}
-                  variables={variables}
-                  containerLabel="Loop Body (executed each iteration)"
-                  depth={depth + 1}
-                  renderStepCard={renderChildStepCard}
-                />
-              </div>
-            )}
-
-            {/* Branch Configuration */}
-            {(hasBranches || step.type === 'branch') && (
-              <BranchConfigEditor
-                branches={step.branches || []}
-                onChange={handleBranchesChange}
-                variables={variables}
-                renderChildSteps={(children, onChange, label) => (
-                  <ChildStepList
-                    children={children}
-                    onChange={onChange}
-                    variables={variables}
-                    containerLabel={label}
-                    depth={depth + 1}
-                    renderStepCard={renderChildStepCard}
-                  />
-                )}
+            {/* Template Mode Configuration */}
+            {isTemplateMode && (
+              <TemplateConfigSection
+                step={step}
+                selectedTemplate={selectedTemplate}
+                onChange={onChange}
+                onShowSelector={() => setShowTemplateSelector(true)}
+                onUnlink={switchToInlineMode}
               />
             )}
 
-            {/* Add Branch Button (if not already has branches and not branch type) */}
-            {!hasBranches && step.type !== 'branch' && (
-              <button
-                type="button"
-                onClick={() => handleBranchesChange([{ condition: '', label: 'Branch 1', children: [] }])}
-                className="w-full flex items-center justify-center space-x-2 px-3 py-2 text-xs font-medium text-purple-600 bg-purple-50 hover:bg-purple-100 border border-dashed border-purple-300 rounded-lg transition-colors"
-              >
-                <GitBranch size={14} />
-                <span>Add Conditional Branches</span>
-              </button>
+            {/* Inline Mode Configuration */}
+            {isInlineMode && (
+              <InlineConfigSection
+                step={step}
+                onChange={onChange}
+              />
             )}
+
+            {/* Common Configuration (always visible) */}
+            <div className="space-y-3">
+              {/* Loop Configuration */}
+              <LoopConfigEditor
+                config={step.loop}
+                onChange={handleLoopChange}
+                variables={variables}
+              />
+
+              {/* Loop Body (if loop enabled) */}
+              {hasLoop && (
+                <div className="mt-3">
+                  <ChildStepList
+                    children={step.children || []}
+                    onChange={handleChildrenChange}
+                    variables={variables}
+                    containerLabel="Loop Body (executed each iteration)"
+                    depth={depth + 1}
+                    renderStepCard={renderChildStepCard}
+                  />
+                </div>
+              )}
+
+              {/* Branch Configuration */}
+              {(hasBranches || step.type === 'branch') && (
+                <BranchConfigEditor
+                  branches={step.branches || []}
+                  onChange={handleBranchesChange}
+                  variables={variables}
+                  renderChildSteps={(children, onChange, label) => (
+                    <ChildStepList
+                      children={children}
+                      onChange={onChange}
+                      variables={variables}
+                      containerLabel={label}
+                      depth={depth + 1}
+                      renderStepCard={renderChildStepCard}
+                    />
+                  )}
+                />
+              )}
+
+              {/* Add Branch Button (if not already has branches and not branch type) */}
+              {!hasBranches && step.type !== 'branch' && (
+                <button
+                  type="button"
+                  onClick={() => handleBranchesChange([{ condition: '', label: 'Branch 1', children: [] }])}
+                  className="w-full flex items-center justify-center space-x-2 px-3 py-2 text-xs font-medium text-purple-600 bg-purple-50 hover:bg-purple-100 border border-dashed border-purple-300 rounded-lg transition-colors"
+                >
+                  <GitBranch size={14} />
+                  <span>Add Conditional Branches</span>
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>
+
+      {/* Action Template Selector Modal */}
+      {showTemplateSelector && (
+        <ActionTemplateSelector
+          projectId="default" // TODO: Get from context
+          onSelect={handleTemplateSelect}
+          onClose={() => setShowTemplateSelector(false)}
+          selectedTemplateId={step.linkedScriptId}
+        />
+      )}
     </div>
   );
 };

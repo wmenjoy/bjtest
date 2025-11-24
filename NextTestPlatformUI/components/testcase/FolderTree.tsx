@@ -10,7 +10,7 @@ interface FolderTreeProps {
     folders: TestFolder[];
     selectedFolderId: string;
     onSelectFolder: (id: string) => void;
-    onAddFolder: (type: 'project' | 'module') => void;
+    onAddFolder: (type: 'service' | 'module') => void;
     statistics?: TestStatistics | null;
     statsLoading?: boolean;
 }
@@ -68,8 +68,19 @@ export const FolderTree: React.FC<FolderTreeProps> = ({ folders, selectedFolderI
             <div className="p-4 border-b border-slate-200 flex justify-between items-center">
                 <h3 className="font-semibold text-slate-700 text-sm">{t('testCase.explorer')}</h3>
                 <div className="flex space-x-1">
-                    <button onClick={() => onAddFolder('project')} title={t('testCase.newFolder')} className="p-1 hover:bg-slate-200 rounded text-slate-500">
+                    <button
+                        onClick={() => onAddFolder('service')}
+                        title="New Service"
+                        className="p-1 hover:bg-slate-200 rounded text-slate-500"
+                    >
                         <Folder size={16} />
+                    </button>
+                    <button
+                        onClick={() => onAddFolder('module')}
+                        title="New Module"
+                        className="p-1 hover:bg-slate-200 rounded text-slate-400"
+                    >
+                        <Plus size={16} />
                     </button>
                 </div>
             </div>
@@ -79,7 +90,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({ folders, selectedFolderI
                     onClick={() => onSelectFolder('root')}
                 >
                     <Layout size={14} className="mr-2" />
-                    <span className="text-sm">{t('testCase.allProjects')}</span>
+                    <span className="text-sm">{t('testCase.allServices') || 'All Services'}</span>
                 </div>
                 {rootFolders.map(f => (
                     <FolderItem

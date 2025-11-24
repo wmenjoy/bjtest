@@ -75,6 +75,7 @@ export interface LoopConfig {
 /**
  * Branch configuration for conditional execution paths
  * Each branch has a condition and child steps to execute when condition is met
+ * NOTE: Uses WorkflowStep (defined below) for children
  */
 export interface BranchConfig {
   /** Condition expression, e.g., "{{status}} == 200" or "default" for else branch */
@@ -82,69 +83,7 @@ export interface BranchConfig {
   /** Human-readable label for the branch */
   label?: string;
   /** Steps to execute when this branch is selected */
-  children: TestStep[];
-}
-
-/**
- * Test step definition with support for control flow (loops, branches, conditions)
- * Can be nested to create complex test scenarios
- */
-export interface TestStep {
-  id: string;
-  /** Short title/name for the step */
-  name?: string;
-  /** Brief summary of step purpose */
-  summary?: string;
-  /** Step type: http, command, assert, branch, group */
-  type?: string;
-
-  // ===== Legacy fields (kept for backward compatibility) =====
-  /** Detailed description/instruction for manual testing */
-  instruction?: string;
-  /** Expected result description */
-  expectedResult?: string;
-
-  // ===== Action Configuration =====
-  /** Action-specific configuration (method, url, headers, etc.) */
-  config?: Record<string, any>;
-  /** Parameter values for linked actions/scripts */
-  parameterValues?: Record<string, any>;
-
-  // ===== Data Flow =====
-  /** Input variable mappings: param name -> variable reference */
-  inputs?: Record<string, string>;
-  /** Output variable mappings: result path -> variable name */
-  outputs?: Record<string, string>;
-  /** Legacy output mapping (kept for backward compatibility) */
-  outputMapping?: Record<string, string>;
-
-  // ===== Control Flow =====
-  /** Simple condition - step runs only if condition evaluates to true */
-  condition?: string;
-
-  /** Structured loop configuration */
-  loop?: LoopConfig;
-
-  /** Multi-branch configuration for conditional paths */
-  branches?: BranchConfig[];
-
-  /** Child steps for loops or groups */
-  children?: TestStep[];
-
-  /** Step dependencies - IDs of steps that must complete first */
-  dependsOn?: string[];
-
-  // ===== Legacy Loop Fields (kept for backward compatibility) =====
-  /** @deprecated Use loop.source instead */
-  loopOver?: string;
-  /** @deprecated Use loop.itemVar instead */
-  loopVar?: string;
-
-  // ===== Automation Binding =====
-  /** Linked script ID for automation */
-  linkedScriptId?: string;
-  /** Linked workflow ID for sub-workflow execution */
-  linkedWorkflowId?: string;
+  children: WorkflowStep[];
 }
 
 // ===== STEP EXECUTION TYPES =====
@@ -314,7 +253,8 @@ export interface TestFolder {
   projectId: string; // Multi-tenancy support
   name: string;
   parentId: string | 'root';
-  type: 'project' | 'module' | 'folder';
+  type: 'service' | 'module' | 'folder';
+  folderType?: 'service' | 'module'; // Additional metadata for display
 }
 
 export interface TestRun {
@@ -590,3 +530,227 @@ export interface BusinessRule {
     rule: string;
     impact: 'High' | 'Medium' | 'Low';
 }
+
+// ===== UNIFIED WORKFLOW ARCHITECTURE TYPES =====
+
+/**
+ * Position on the visual canvas for Advanced Mode
+ */
+export interface Position {
+  x: number;
+  y: number;
+}
+
+/**
+ * Data Mapper for visual data flow configuration
+ * Maps output from a source step to input parameter of current step
+ */
+export interface DataMapper {
+  /** Unique identifier for this mapper */
+  id: string;
+  /** Source step ID, e.g., "step-login" */
+  sourceStep: string;
+  /** JSONPath to the output field, e.g., "response.body.token" */
+  sourcePath: string;
+  /** Target input parameter name, e.g., "authToken" */
+  targetParam: string;
+  /** Optional transform function: "uppercase", "parseInt", "trim", etc. */
+  transform?: string;
+}
+
+/**
+ * Action Parameter Definition
+ * Describes an input parameter for an Action Template
+ */
+export interface ActionParameter {
+  name: string;
+  type: 'string' | 'number' | 'boolean' | 'object' | 'array';
+  description?: string;
+  required: boolean;
+  defaultValue?: any;
+  enum?: string[]; // Enumeration values if applicable
+}
+
+/**
+ * Action Output Definition
+ * Describes an output field from an Action Template
+ */
+export interface ActionOutput {
+  name: string;
+  type: string;
+  path: string; // JSONPath, e.g., "response.body.token"
+  description?: string;
+}
+
+/**
+ * Action Template - Reusable action definition
+ * Can be referenced by multiple WorkflowSteps across different workflows
+ */
+export interface ActionTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  category: string; // "Authentication", "Database", "HTTP", etc.
+  type: string; // "http", "command", "database", "script"
+
+  /** Configuration template with parameter placeholders */
+  configTemplate: Record<string, any>;
+
+  /** Input parameters definition */
+  parameters: ActionParameter[];
+
+  /** Output fields definition */
+  outputs: ActionOutput[];
+
+  /** Tags for search and categorization */
+  tags?: string[];
+
+  /** Multi-tenant scope: system, platform, tenant */
+  scope: 'system' | 'platform' | 'tenant';
+  tenantId?: string; // NULL for system/platform scope
+
+  /** Permission control */
+  isPublic: boolean;
+  allowCopy: boolean;
+
+  /** Metadata */
+  isBuiltIn?: boolean;
+  isTemplate?: boolean;
+  version: string;
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/**
+ * Merge Node Configuration
+ * Waits for multiple parallel branches to complete and merges results
+ */
+export interface MergeConfig {
+  /** Merge strategy */
+  strategy: 'waitAll' | 'waitAny' | 'waitN';
+  /** Number to wait for when strategy is 'waitN' */
+  waitCount?: number;
+  /** Merge mode: combine into object or array */
+  mode: 'object' | 'array';
+  /** Custom mapping for merged results */
+  mapping?: Record<string, string>;
+}
+
+/**
+ * Assertion Definition
+ * Used in test-focused workflows to validate results
+ */
+export interface Assertion {
+  type: 'equals' | 'contains' | 'matches' | 'greaterThan' | 'lessThan';
+  actual: string; // Variable reference, e.g., "{{response.status}}"
+  expected: any;
+  message?: string;
+}
+
+/**
+ * Unified Workflow Step
+ * Replaces TestStep with richer structure supporting:
+ * - Action Template references
+ * - Data flow mapping
+ * - Control flow (branches, loops)
+ * - Assertions
+ * - Parallel execution (DAG)
+ */
+export interface WorkflowStep {
+  id: string;
+  name?: string; // Optional for backward compatibility
+  type?: string; // Optional for backward compatibility - http, command, database, script, branch, loop, merge
+
+  // 【核心】两种配置方式（互斥）
+  // Method 1: Reference Action Template (recommended)
+  actionTemplateId?: string;
+  actionVersion?: string;
+
+  // Method 2: Inline config (backward compatibility)
+  config?: Record<string, any>;
+
+  // Data Flow
+  inputs?: Record<string, string>; // Parameter bindings, e.g., { "username": "{{testUser}}" }
+  outputs?: Record<string, string>; // Output mappings, e.g., { "authToken": "currentToken" }
+  dataMappers?: DataMapper[]; // Visual data mapping configuration
+
+  // Control Flow
+  condition?: string; // Condition expression for execution
+  dependsOn?: string[]; // Step IDs that must complete before this step (DAG)
+  loop?: LoopConfig; // Loop configuration
+  branches?: BranchConfig[]; // Branch configuration
+  children?: WorkflowStep[]; // Nested steps (for branch children, loop body, group) - complete objects, not IDs
+
+  // Error Handling
+  onError?: 'abort' | 'continue' | 'retry';
+  retryCount?: number;
+  retryDelay?: number; // seconds
+  timeout?: number; // seconds
+
+  // Assertions (test perspective)
+  assertions?: Assertion[];
+
+  // UI Related (for Advanced Mode)
+  position?: Position;
+  collapsed?: boolean;
+  disabled?: boolean;
+
+  // ===== Legacy fields (kept for backward compatibility) =====
+  /** Brief summary of step purpose */
+  summary?: string;
+  /** Detailed description/instruction for manual testing */
+  instruction?: string;
+  /** Expected result description */
+  expectedResult?: string;
+  /** Parameter values for linked actions/scripts */
+  parameterValues?: Record<string, any>;
+  /** Legacy output mapping (kept for backward compatibility) */
+  outputMapping?: Record<string, string>;
+  /** @deprecated Use loop.source instead */
+  loopOver?: string;
+  /** @deprecated Use loop.itemVar instead */
+  loopVar?: string;
+  /** Linked script ID for automation */
+  linkedScriptId?: string;
+  /** Linked workflow ID for sub-workflow execution */
+  linkedWorkflowId?: string;
+}
+
+/**
+ * Backward compatibility alias
+ * TestStep is now an alias for WorkflowStep
+ */
+export type TestStep = WorkflowStep;
+
+/**
+ * Workflow Definition (Unified)
+ * Represents both traditional workflows and test cases
+ */
+export interface UnifiedWorkflow {
+  id: string;
+  name: string;
+  description?: string;
+  type: 'workflow' | 'testcase'; // Differentiates perspective
+
+  /** Steps in the workflow/testcase */
+  steps: WorkflowStep[];
+
+  /** Global variables */
+  variables?: Record<string, any>;
+
+  /** Lifecycle */
+  setupSteps?: string[]; // Step IDs for setup
+  teardownSteps?: string[]; // Step IDs for teardown
+
+  /** Multi-tenancy */
+  tenantId?: string;
+  projectId?: string;
+
+  /** Metadata */
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  version?: string;
+}
+

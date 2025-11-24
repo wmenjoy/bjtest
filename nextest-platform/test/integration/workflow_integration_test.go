@@ -132,6 +132,7 @@ func setupWorkflowTestEnvironment(t *testing.T) (*gin.Engine, *gorm.DB, *websock
 		nil, // Will be set after unifiedExecutor is created
 		hub,
 		variableInjector,
+		nil, // No action template repo for tests
 	)
 
 	// Create workflow executor adapter to match testcase.WorkflowExecutor interface
@@ -153,6 +154,7 @@ func setupWorkflowTestEnvironment(t *testing.T) (*gin.Engine, *gorm.DB, *websock
 		unifiedExecutor,
 		hub,
 		variableInjector,
+		nil, // No action template repo for tests
 	)
 
 	// Update adapter with the new workflow executor
@@ -1017,6 +1019,7 @@ func setupWorkflowTestEnvironmentWithFile(t *testing.T) (*gin.Engine, *gorm.DB, 
 		nil, // Will be set after unifiedExecutor is created
 		hub,
 		variableInjector,
+		nil, // No action template repo for tests
 	)
 
 	// Create workflow executor adapter to match testcase.WorkflowExecutor interface
@@ -1038,6 +1041,7 @@ func setupWorkflowTestEnvironmentWithFile(t *testing.T) (*gin.Engine, *gorm.DB, 
 		unifiedExecutor,
 		hub,
 		variableInjector,
+		nil, // No action template repo for tests
 	)
 
 	// Update adapter with the new workflow executor
