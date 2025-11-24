@@ -7,21 +7,24 @@ import (
 )
 
 // ActionTemplate represents a reusable action template
-// Supports three-tier scoping: System (built-in), Platform (shared), Tenant (private)
+// Supports four-tier scoping: System (built-in), Platform (shared), Organization (org-specific), Project (project-specific)
 //
 // Scope levels:
 // - system: Built-in templates provided by the platform (e.g., HTTP requests, database queries)
 // - platform: Shared templates across all tenants (created by platform admins)
-// - tenant: Private templates specific to a tenant (created by tenant users)
+// - organization: Private templates specific to an organization (created by org users)
+// - project: Private templates specific to a project (created by project users)
 //
 // Example usage:
 //   System template: Login action with configurable endpoints
 //   Platform template: Common API health check shared across tenants
-//   Tenant template: Organization-specific user provisioning workflow
+//   Organization template: Organization-specific user provisioning workflow
+//   Project template: Project-specific integration tests
 type ActionTemplate struct {
 	ID         uint   `gorm:"primaryKey" json:"id"`
 	TemplateID string `gorm:"uniqueIndex;size:255;not null" json:"templateId"` // e.g., "action-user-login"
 	TenantID   string `gorm:"index;size:100" json:"tenantId,omitempty"`        // null for system/platform templates
+	ProjectID  string `gorm:"index;size:100" json:"projectId,omitempty"`       // null for system/platform/organization templates
 
 	// Basic Info
 	Name        string `gorm:"size:255;not null" json:"name"`        // Display name
@@ -77,8 +80,8 @@ type ActionTemplate struct {
 	Outputs JSONArray `gorm:"type:text" json:"outputs"`
 
 	// Scope and Permissions
-	Scope    string `gorm:"index;size:20;not null" json:"scope"`   // system, platform, tenant
-	IsPublic bool   `gorm:"default:false" json:"isPublic"`         // For platform/tenant templates
+	Scope    string `gorm:"index;size:20;not null" json:"scope"`   // system, platform, organization, project
+	IsPublic bool   `gorm:"default:false" json:"isPublic"`         // For platform/organization/project templates
 
 	// Metadata
 	Tags    JSONArray `gorm:"type:text" json:"tags"`      // e.g., ["auth", "api", "v1"]
@@ -118,23 +121,36 @@ func (at *ActionTemplate) IsPlatformTemplate() bool {
 	return at.Scope == "platform"
 }
 
-// IsTenantTemplate checks if this is a tenant-specific template
+// IsTenantTemplate checks if this is a tenant-specific template (organization scope)
 func (at *ActionTemplate) IsTenantTemplate() bool {
-	return at.Scope == "tenant"
+	return at.Scope == "tenant" || at.Scope == "organization"
 }
 
-// CanBeAccessedBy checks if the template can be accessed by a given tenant
+// IsOrganizationTemplate checks if this is an organization-level template
+func (at *ActionTemplate) IsOrganizationTemplate() bool {
+	return at.Scope == "organization"
+}
+
+// IsProjectTemplate checks if this is a project-specific template
+func (at *ActionTemplate) IsProjectTemplate() bool {
+	return at.Scope == "project"
+}
+
+// CanBeAccessedBy checks if the template can be accessed by a given tenant and project
 // System templates are accessible to all
 // Platform templates are accessible to all if IsPublic is true
-// Tenant templates are only accessible to their own tenant
-func (at *ActionTemplate) CanBeAccessedBy(tenantID string) bool {
+// Organization templates are only accessible to their own organization
+// Project templates are only accessible to their own project
+func (at *ActionTemplate) CanBeAccessedBy(tenantID, projectID string) bool {
 	switch at.Scope {
 	case "system":
 		return true
 	case "platform":
 		return at.IsPublic
-	case "tenant":
+	case "organization", "tenant": // Support both 'organization' and legacy 'tenant' scope
 		return at.TenantID == tenantID
+	case "project":
+		return at.TenantID == tenantID && at.ProjectID == projectID
 	default:
 		return false
 	}

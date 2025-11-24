@@ -21,8 +21,13 @@ type ActionTemplateService interface {
 	// List retrieves action templates with filtering and pagination
 	List(ctx context.Context, filter repository.ActionTemplateFilter) ([]*models.ActionTemplate, int64, error)
 
-	// GetAccessibleTemplates retrieves templates accessible to a tenant
-	GetAccessibleTemplates(ctx context.Context, tenantID string, filter repository.ActionTemplateFilter) ([]*models.ActionTemplate, int64, error)
+	// GetAccessibleTemplates retrieves templates accessible to a tenant and project
+	// Implements four-layer permission filtering:
+	// Level 1: scope='system' (visible to everyone)
+	// Level 2: scope='platform' AND is_public=true
+	// Level 3: scope='organization' AND tenant_id=current organization
+	// Level 4: scope='project' AND tenant_id=current organization AND project_id=current project
+	GetAccessibleTemplates(ctx context.Context, tenantID string, projectID string, filter repository.ActionTemplateFilter) ([]*models.ActionTemplate, int64, error)
 
 	// Update updates an existing action template
 	Update(ctx context.Context, template *models.ActionTemplate) error
@@ -69,9 +74,14 @@ func (s *actionTemplateServiceImpl) List(ctx context.Context, filter repository.
 	return s.repo.List(ctx, filter)
 }
 
-// GetAccessibleTemplates retrieves templates accessible to a tenant
-func (s *actionTemplateServiceImpl) GetAccessibleTemplates(ctx context.Context, tenantID string, filter repository.ActionTemplateFilter) ([]*models.ActionTemplate, int64, error) {
-	return s.repo.GetAccessibleTemplates(ctx, tenantID, filter)
+// GetAccessibleTemplates retrieves templates accessible to a tenant and project
+// Implements four-layer permission filtering:
+// Level 1: scope='system' (visible to everyone)
+// Level 2: scope='platform' AND is_public=true
+// Level 3: scope='organization' AND tenant_id=current organization
+// Level 4: scope='project' AND tenant_id=current organization AND project_id=current project
+func (s *actionTemplateServiceImpl) GetAccessibleTemplates(ctx context.Context, tenantID string, projectID string, filter repository.ActionTemplateFilter) ([]*models.ActionTemplate, int64, error) {
+	return s.repo.GetAccessibleTemplates(ctx, tenantID, projectID, filter)
 }
 
 // Update updates an existing action template

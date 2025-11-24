@@ -43,16 +43,17 @@ export const ActionLibrary: React.FC<ActionLibraryProps> = ({ scripts, workflows
 
   // Load backend action templates when builtin tab is active or filter changes
   useEffect(() => {
-    if (activeTab === 'builtin') {
+    if (activeTab === 'builtin' && projectId) {  // ⭐ 添加 projectId 检查
       loadActionTemplates();
     }
-  }, [activeTab, selectedFilter, searchTerm]);
+  }, [activeTab, selectedFilter, searchTerm, projectId]);
 
   const loadActionTemplates = async () => {
     try {
       setTemplatesLoading(true);
       setTemplatesError(null);
       const result = await actionTemplateApi.getAccessibleTemplates({
+        projectId,  // ⭐ 添加必需的 projectId 参数
         category: selectedFilter !== 'All' ? selectedFilter : undefined,
         search: searchTerm || undefined,
         pageSize: 100

@@ -127,12 +127,20 @@ func (h *ActionTemplateHandler) List(c *gin.Context) {
 	})
 }
 
-// GetAccessibleTemplates retrieves templates accessible to current tenant
-// GET /api/v2/action-templates/accessible?category=Network&page=1
+// GetAccessibleTemplates retrieves templates accessible to current tenant and project
+// GET /api/v2/action-templates/accessible?projectId=<projectID>&category=Network&page=1
 func (h *ActionTemplateHandler) GetAccessibleTemplates(c *gin.Context) {
+	// Get tenant_id from context (set by auth middleware)
 	tenantID := middleware.GetTenantID(c)
 	if tenantID == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Tenant ID not found in context"})
+		return
+	}
+
+	// Get project_id from query parameter (required)
+	projectID := c.Query("projectId")
+	if projectID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "projectId query parameter is required"})
 		return
 	}
 
@@ -161,7 +169,7 @@ func (h *ActionTemplateHandler) GetAccessibleTemplates(c *gin.Context) {
 		filter.Tags = strings.Split(tagsStr, ",")
 	}
 
-	templates, total, err := h.service.GetAccessibleTemplates(c.Request.Context(), tenantID, filter)
+	templates, total, err := h.service.GetAccessibleTemplates(c.Request.Context(), tenantID, projectID, filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get accessible templates", "details": err.Error()})
 		return

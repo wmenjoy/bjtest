@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { LayoutDashboard, ListTodo, GitMerge, Library, Database, Shield, Settings, History, LogOut, ChevronDown, Check, Sun, Moon, Building2, FolderKanban, Server, BookOpen } from 'lucide-react';
+import { LayoutDashboard, ListTodo, GitMerge, Library, Database, Shield, Settings, History, LogOut, ChevronDown, Check, Sun, Moon, Building2, FolderKanban, Server, BookOpen, Globe } from 'lucide-react';
 import { User, Environment, Organization, Project, Role } from '../../types';
 import { useConfig } from '../../ConfigContext';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -52,6 +52,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
     const allNavItems = [
         { id: 'dashboard', icon: LayoutDashboard, label: t('nav.dashboard'), permission: 'VIEW_DASHBOARD' },
+        { id: 'apis', icon: Globe, label: 'API 中心', permission: 'VIEW_APIS' },
         { id: 'cases', icon: ListTodo, label: t('nav.repository'), permission: 'VIEW_CASES' },
         { id: 'automation', icon: GitMerge, label: t('nav.automation'), permission: 'VIEW_AUTOMATION' },
         { id: 'library', icon: Library, label: t('nav.library'), permission: 'VIEW_LIBRARY' },

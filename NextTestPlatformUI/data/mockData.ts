@@ -4,6 +4,7 @@ import { TestFolder, Script, ScriptType, TestCase, Priority, Status, TestRun, Ex
 export const SYSTEM_PERMISSIONS: Permission[] = [
     // Menu Permissions
     { code: 'VIEW_DASHBOARD', name: 'View Dashboard', category: 'Menu', description: 'Access the main dashboard' },
+    { code: 'VIEW_APIS', name: 'View API Center', category: 'Menu', description: 'Access the API management center' },
     { code: 'VIEW_CASES', name: 'View Test Repository', category: 'Menu', description: 'Access test cases and folders' },
     { code: 'VIEW_AUTOMATION', name: 'View Automation Lab', category: 'Menu', description: 'Access the workflow and script editor' },
     { code: 'VIEW_LIBRARY', name: 'View Action Library', category: 'Menu', description: 'Access the library of actions and templates' },
