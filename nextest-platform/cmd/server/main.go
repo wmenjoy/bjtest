@@ -78,6 +78,7 @@ func main() {
 	stepExecRepo := repository.NewStepExecutionRepository(db)
 	stepLogRepo := repository.NewStepLogRepository(db)
 	actionTemplateRepo := repository.NewActionTemplateRepository(db)
+	roleRepo := repository.NewRoleRepository(db)
 
 	// Initialize environment service and variable injector
 	envService := service.NewEnvironmentService(envRepo, envVarRepo)
@@ -121,7 +122,7 @@ func main() {
 	envHandler := handler.NewEnvironmentHandler(envService)
 	workflowHandler := handler.NewWorkflowHandler(workflowService)
 	wsHandler := handler.NewWebSocketHandler(hub)
-	userHandler := handler.NewUserHandler()
+	userHandler := handler.NewUserHandler(roleRepo)
 	actionTemplateHandler := handler.NewActionTemplateHandler(actionTemplateService)
 
 	// Setup Gin router

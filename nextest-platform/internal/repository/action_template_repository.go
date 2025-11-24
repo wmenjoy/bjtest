@@ -32,9 +32,13 @@ type ActionTemplateRepository interface {
 	// IncrementUsageCount increments the usage counter for a template
 	IncrementUsageCount(ctx context.Context, templateID string) error
 
-	// GetAccessibleTemplates retrieves templates accessible to a tenant
-	// Includes: system templates + platform public templates + tenant's own templates
-	GetAccessibleTemplates(ctx context.Context, tenantID string, filter ActionTemplateFilter) ([]*models.ActionTemplate, int64, error)
+	// GetAccessibleTemplates retrieves templates accessible to a tenant and project
+	// Implements four-layer permission filtering:
+	// Level 1: scope='system' (visible to everyone)
+	// Level 2: scope='platform' AND is_public=true
+	// Level 3: scope='organization' AND tenant_id=current organization
+	// Level 4: scope='project' AND tenant_id=current organization AND project_id=current project
+	GetAccessibleTemplates(ctx context.Context, tenantID string, projectID string, filter ActionTemplateFilter) ([]*models.ActionTemplate, int64, error)
 }
 
 // ActionTemplateFilter defines filtering options for action templates
@@ -183,25 +187,24 @@ func (r *actionTemplateRepositoryImpl) List(ctx context.Context, filter ActionTe
 	return templates, total, nil
 }
 
-// GetAccessibleTemplates retrieves templates accessible to a tenant
-// Implements three-tier access control:
-// - System templates (scope = 'system')
-// - Platform public templates (scope = 'platform' AND is_public = true)
-// - Tenant's own templates (scope = 'tenant' AND tenant_id = ?)
-func (r *actionTemplateRepositoryImpl) GetAccessibleTemplates(ctx context.Context, tenantID string, filter ActionTemplateFilter) ([]*models.ActionTemplate, int64, error) {
+// GetAccessibleTemplates retrieves templates accessible to a tenant and project
+// Implements four-layer permission filtering:
+// Level 1: scope='system' (visible to everyone)
+// Level 2: scope='platform' AND is_public=true
+// Level 3: scope='organization' AND tenant_id=current organization
+// Level 4: scope='project' AND tenant_id=current organization AND project_id=current project
+func (r *actionTemplateRepositoryImpl) GetAccessibleTemplates(ctx context.Context, tenantID string, projectID string, filter ActionTemplateFilter) ([]*models.ActionTemplate, int64, error) {
 	var templates []*models.ActionTemplate
 	var total int64
 
-	// Build base query with three-tier access control
-	// TODO: This query uses OR conditions which should be optimized with proper indexes
-	// Recommended indexes:
-	//   - idx_scope_public on (scope, is_public)
-	//   - idx_tenant_scope on (tenant_id, scope)
+	// Build base query with four-layer access control
+	// Uses OR conditions to combine different permission levels
 	query := r.db.WithContext(ctx).Model(&models.ActionTemplate{}).
 		Where(
-			r.db.Where("scope = ?", "system").
-				Or("scope = ? AND is_public = ?", "platform", true).
-				Or("scope = ? AND tenant_id = ?", "tenant", tenantID),
+			r.db.Where("scope = ?", "system").                                              // Level 1: System templates
+				Or("scope = ? AND is_public = ?", "platform", true).                        // Level 2: Public platform templates
+				Or("scope = ? AND tenant_id = ?", "organization", tenantID).                // Level 3: Organization templates
+				Or("scope = ? AND tenant_id = ? AND project_id = ?", "project", tenantID, projectID), // Level 4: Project templates
 		)
 
 	// Apply additional filters

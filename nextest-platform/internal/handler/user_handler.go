@@ -5,16 +5,19 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"test-management-service/internal/models"
+	"test-management-service/internal/repository"
 )
 
 // UserHandler handles user-related requests
 type UserHandler struct {
-	// db *gorm.DB // Will add database support later
+	roleRepo repository.RoleRepository
 }
 
 // NewUserHandler creates a new user handler
-func NewUserHandler() *UserHandler {
-	return &UserHandler{}
+func NewUserHandler(roleRepo repository.RoleRepository) *UserHandler {
+	return &UserHandler{
+		roleRepo: roleRepo,
+	}
 }
 
 // ListUsers returns all users
@@ -63,57 +66,14 @@ func (h *UserHandler) GetCurrentUser(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
-// ListRoles returns all roles
+// ListRoles returns all roles from database
 func (h *UserHandler) ListRoles(c *gin.Context) {
-	// All permissions
-	allPerms := []string{
-		"VIEW_DASHBOARD", "VIEW_CASES", "VIEW_AUTOMATION", "VIEW_LIBRARY",
-		"VIEW_DATABASE", "VIEW_HISTORY", "VIEW_ADMIN", "VIEW_SETTINGS", "VIEW_DOCS",
-		"CREATE_CASE", "EDIT_CASE", "DELETE_CASE", "EXECUTE_RUN",
-		"MANAGE_SCRIPTS", "MANAGE_USERS", "MANAGE_PROJECTS",
-	}
-
-	// Editor permissions (no admin/settings)
-	editorPerms := []string{
-		"VIEW_DASHBOARD", "VIEW_CASES", "VIEW_AUTOMATION", "VIEW_LIBRARY",
-		"VIEW_DATABASE", "VIEW_HISTORY", "VIEW_DOCS",
-		"CREATE_CASE", "EDIT_CASE", "DELETE_CASE", "EXECUTE_RUN", "MANAGE_SCRIPTS",
-	}
-
-	// Viewer permissions (read-only)
-	viewerPerms := []string{
-		"VIEW_DASHBOARD", "VIEW_CASES", "VIEW_AUTOMATION", "VIEW_LIBRARY",
-		"VIEW_DATABASE", "VIEW_HISTORY", "VIEW_DOCS",
-	}
-
-	// Convert to JSONArray ([]interface{})
-	toJSONArray := func(strs []string) models.JSONArray {
-		result := make([]interface{}, len(strs))
-		for i, s := range strs {
-			result[i] = s
-		}
-		return result
-	}
-
-	roles := []models.Role{
-		{
-			RoleID:          "admin",
-			Name:            "Administrator",
-			Description:     "Full system access",
-			PermissionCodes: toJSONArray(allPerms),
-		},
-		{
-			RoleID:          "editor",
-			Name:            "Editor",
-			Description:     "Can manage test cases and execute runs",
-			PermissionCodes: toJSONArray(editorPerms),
-		},
-		{
-			RoleID:          "viewer",
-			Name:            "Viewer",
-			Description:     "Read-only access to dashboards and reports",
-			PermissionCodes: toJSONArray(viewerPerms),
-		},
+	roles, err := h.roleRepo.GetAll(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to fetch roles from database",
+		})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{

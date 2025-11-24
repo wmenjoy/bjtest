@@ -3,7 +3,7 @@
  * 用于管理动作模板的 CRUD 操作和使用记录
  */
 
-import { apiClient, PaginatedResponse, toApiPagination, PaginationParams } from './apiClient';
+import { apiClient, toApiPagination, PaginationParams } from './apiClient';
 
 // ===== 类型定义 =====
 
@@ -11,6 +11,7 @@ export interface ActionTemplate {
   id: number;
   templateId: string;
   tenantId: string;
+  projectId?: string;
   name: string;
   description: string;
   category: string;
@@ -18,7 +19,7 @@ export interface ActionTemplate {
   configTemplate: Record<string, any>;
   parameters: any[];
   outputs: any[];
-  scope: 'system' | 'platform' | 'tenant';
+  scope: 'system' | 'platform' | 'organization' | 'project';
   isPublic: boolean;
   usageCount: number;
   createdAt?: string;
@@ -26,6 +27,7 @@ export interface ActionTemplate {
 }
 
 export interface ActionTemplateFilter extends PaginationParams {
+  projectId: string;
   category?: string;
   type?: string;
   search?: string;
@@ -45,11 +47,17 @@ export const actionTemplateApi = {
    * 获取可访问的 Action Templates (带过滤和分页)
    * GET /api/action-templates/accessible
    */
-  getAccessibleTemplates: async (filter: ActionTemplateFilter = {}): Promise<AccessibleTemplatesResponse> => {
+  getAccessibleTemplates: async (filter: ActionTemplateFilter): Promise<AccessibleTemplatesResponse> => {
+    // 校验 projectId 必传
+    if (!filter.projectId) {
+      throw new Error('projectId is required');
+    }
+
     const pagination = toApiPagination(filter);
     const params: Record<string, string | number> = {
       limit: pagination.limit,
       offset: pagination.offset,
+      projectId: filter.projectId,
     };
 
     if (filter.category) {
@@ -88,9 +96,11 @@ export const actionTemplateApi = {
    * POST /api/action-templates
    */
   createTemplate: async (
-    template: Omit<ActionTemplate, 'id' | 'usageCount' | 'createdAt' | 'updatedAt'>
+    template: Omit<ActionTemplate, 'id' | 'usageCount' | 'createdAt' | 'updatedAt'>,
+    projectId?: string
   ): Promise<ActionTemplate> => {
-    return apiClient.post<ActionTemplate>('/action-templates', template);
+    const payload = projectId ? { ...template, projectId } : template;
+    return apiClient.post<ActionTemplate>('/action-templates', payload);
   },
 
   /**

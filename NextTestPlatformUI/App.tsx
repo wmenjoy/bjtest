@@ -10,6 +10,7 @@ import { SystemConfigPage } from './components/SystemConfig';
 import { Auth } from './components/Auth';
 import { TestHistory } from './components/TestHistory';
 import { DocumentationHub } from './components/DocumentationHub';
+import { APICenter } from './components/APICenter';
 import { Sidebar } from './components/layout/Sidebar';
 import { useAppState } from './hooks/useAppState';
 import { useApiState } from './hooks/useApiState';
@@ -108,7 +109,20 @@ const App: React.FC = () => {
             {currentTab === 'dashboard' && (
                 hasPermission('VIEW_DASHBOARD') ? <div className="h-full overflow-y-auto p-8"><Dashboard runs={activeProjectRuns} /></div> : <AccessDenied />
             )}
-            
+
+            {currentTab === 'apis' && (
+                hasPermission('VIEW_APIS') ? (
+                  <APICenter
+                    cases={activeProjectCases}
+                    projectId={activeProjectId}
+                    activeOrgId={activeOrgId}
+                    onCreateTest={(api) => {
+                      setCurrentTab('cases');
+                    }}
+                  />
+                ) : <AccessDenied />
+            )}
+
             {currentTab === 'cases' && (
                  hasPermission('VIEW_CASES') ? (
                 <>
