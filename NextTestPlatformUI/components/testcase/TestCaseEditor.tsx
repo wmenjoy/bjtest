@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { TestCase, Script, Workflow, TestStep } from '../../types';
-import { ArrowRight, Save, Plus, List, Sliders, PlayCircle } from 'lucide-react';
+import { ArrowRight, Save, Plus, List, Sliders, PlayCircle, X } from 'lucide-react';
 import { useConfig } from '../../ConfigContext';
 import { EditorSidebar } from './editor/EditorSidebar';
 import { StepEditor } from './stepEditor/StepEditor';
@@ -103,7 +103,7 @@ export const TestCaseEditor: React.FC<TestCaseEditorProps> = ({ initialCase, ava
     };
 
     return (
-        <div className="fixed inset-0 bg-white z-50 flex flex-col animate-fade-in">
+        <div className="flex flex-col bg-white h-full overflow-hidden">
             {/* Header */}
             <div className="h-14 border-b border-slate-200 flex justify-between items-center px-6 bg-slate-900 text-white shrink-0">
                 <div className="flex items-center space-x-4">
@@ -118,9 +118,18 @@ export const TestCaseEditor: React.FC<TestCaseEditorProps> = ({ initialCase, ava
                         />
                     </div>
                 </div>
-                <button onClick={() => onSave(formState)} className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-sm font-medium flex items-center space-x-2 shadow-lg shadow-blue-900/20">
-                    <Save size={16}/><span>{t('testCase.save')}</span>
-                </button>
+                <div className="flex items-center space-x-2">
+                    <button
+                        onClick={onCancel}
+                        className="px-4 py-1.5 border border-slate-300 hover:bg-slate-50 rounded text-sm font-medium flex items-center space-x-2"
+                    >
+                        <X size={16}/>
+                        <span>Close</span>
+                    </button>
+                    <button onClick={() => onSave(formState)} className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-sm font-medium flex items-center space-x-2 shadow-lg shadow-blue-900/20 text-white">
+                        <Save size={16}/><span>{t('testCase.save')}</span>
+                    </button>
+                </div>
             </div>
 
             <div className="flex-1 flex overflow-hidden">

@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { TestCase, Status } from '../../types';
 import { FileText, Play, Bot, GitBranch, Repeat, Workflow, Trash2, Globe, Terminal, Settings } from 'lucide-react';
 import { useConfig } from '../../ConfigContext';
+import { ViewModeSwitcher, ViewMode } from './ViewModeSwitcher';
+import { WorkflowView } from './workflow/WorkflowView';
 
 interface CaseDetailProps {
     testCase: TestCase | null;
@@ -14,6 +16,7 @@ interface CaseDetailProps {
 export const CaseDetail: React.FC<CaseDetailProps> = ({ testCase, onEdit, onRun, onDelete }) => {
     const { t } = useConfig();
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [viewMode, setViewMode] = useState<ViewMode>('list');
 
     const handleDelete = () => {
         if (testCase && onDelete) {
@@ -115,56 +118,66 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({ testCase, onEdit, onRun,
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                         <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
                             <h3 className="font-semibold text-slate-700">{t('testCase.definition')}</h3>
+                            <ViewModeSwitcher currentMode={viewMode} onChange={setViewMode} />
                         </div>
-                        <div className="divide-y divide-slate-100">
-                            {testCase.steps.length > 0 ? testCase.steps.map((step, idx) => (
-                                <div key={step.id} className="p-4 grid grid-cols-12 gap-4 group hover:bg-slate-50/50 transition-colors">
-                                    <div className="col-span-1 flex flex-col items-center pt-1 text-slate-300">
-                                        <span className="text-xs font-bold">#{idx + 1}</span>
-                                        <div className="mt-2">
-                                            {step.linkedWorkflowId ? <Workflow size={16} className="text-indigo-500"/> : <Bot size={16} className="text-purple-500" />}
-                                        </div>
-                                    </div>
-                                    <div className="col-span-11">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <h5 className="text-sm font-bold text-slate-800">{step.summary || `Step ${idx + 1}`}</h5>
-                                            <div className="flex items-center space-x-2">
-                                                 {step.condition && (
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-100">
-                                                        <GitBranch size={10} className="mr-1" /> If {step.condition}
-                                                    </span>
-                                                )}
-                                                {step.loopOver && (
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-orange-50 text-orange-700 border border-orange-100">
-                                                        <Repeat size={10} className="mr-1" /> Loop: {step.loopOver}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
 
-                                        {/* Param Visualization */}
-                                        <div className="bg-slate-50 rounded border border-slate-100 p-2 text-xs font-mono text-slate-600 grid grid-cols-2 gap-4">
-                                            <div>
-                                                <span className="text-[10px] text-slate-400 uppercase font-sans font-bold mb-1 block">Inputs</span>
-                                                {step.parameterValues && Object.keys(step.parameterValues).length > 0 ? (
-                                                    Object.entries(step.parameterValues).map(([k,v]) => (
-                                                        <div key={k} className="flex space-x-1"><span className="text-slate-500">{k}:</span> <span className="text-blue-600 truncate max-w-[150px]">{String(v)}</span></div>
-                                                    ))
-                                                ) : <span className="text-slate-400 italic">-</span>}
+                        {viewMode === 'list' ? (
+                            /* List View */
+                            <div className="divide-y divide-slate-100">
+                                {testCase.steps.length > 0 ? testCase.steps.map((step, idx) => (
+                                    <div key={step.id} className="p-4 grid grid-cols-12 gap-4 group hover:bg-slate-50/50 transition-colors">
+                                        <div className="col-span-1 flex flex-col items-center pt-1 text-slate-300">
+                                            <span className="text-xs font-bold">#{idx + 1}</span>
+                                            <div className="mt-2">
+                                                {step.linkedWorkflowId ? <Workflow size={16} className="text-indigo-500"/> : <Bot size={16} className="text-purple-500" />}
                                             </div>
-                                            <div>
-                                                <span className="text-[10px] text-slate-400 uppercase font-sans font-bold mb-1 block">Outputs</span>
-                                                {step.outputMapping && Object.keys(step.outputMapping).length > 0 ? (
-                                                    Object.entries(step.outputMapping).map(([k,v]) => (
-                                                        <div key={k} className="flex space-x-1"><span className="text-slate-500">{k}</span> <span className="text-slate-300">→</span> <span className="text-cyan-600">{v}</span></div>
-                                                    ))
-                                                ) : <span className="text-slate-400 italic">-</span>}
+                                        </div>
+                                        <div className="col-span-11">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <h5 className="text-sm font-bold text-slate-800">{step.summary || `Step ${idx + 1}`}</h5>
+                                                <div className="flex items-center space-x-2">
+                                                     {step.condition && (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-100">
+                                                            <GitBranch size={10} className="mr-1" /> If {step.condition}
+                                                        </span>
+                                                    )}
+                                                    {step.loopOver && (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-orange-50 text-orange-700 border border-orange-100">
+                                                            <Repeat size={10} className="mr-1" /> Loop: {step.loopOver}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Param Visualization */}
+                                            <div className="bg-slate-50 rounded border border-slate-100 p-2 text-xs font-mono text-slate-600 grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <span className="text-[10px] text-slate-400 uppercase font-sans font-bold mb-1 block">Inputs</span>
+                                                    {step.parameterValues && Object.keys(step.parameterValues).length > 0 ? (
+                                                        Object.entries(step.parameterValues).map(([k,v]) => (
+                                                            <div key={k} className="flex space-x-1"><span className="text-slate-500">{k}:</span> <span className="text-blue-600 truncate max-w-[150px]">{String(v)}</span></div>
+                                                        ))
+                                                    ) : <span className="text-slate-400 italic">-</span>}
+                                                </div>
+                                                <div>
+                                                    <span className="text-[10px] text-slate-400 uppercase font-sans font-bold mb-1 block">Outputs</span>
+                                                    {step.outputMapping && Object.keys(step.outputMapping).length > 0 ? (
+                                                        Object.entries(step.outputMapping).map(([k,v]) => (
+                                                            <div key={k} className="flex space-x-1"><span className="text-slate-500">{k}</span> <span className="text-slate-300">→</span> <span className="text-cyan-600">{v}</span></div>
+                                                        ))
+                                                    ) : <span className="text-slate-400 italic">-</span>}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            )) : <div className="p-8 text-center text-slate-400">No steps defined for this test case</div>}
-                        </div>
+                                )) : <div className="p-8 text-center text-slate-400">No steps defined for this test case</div>}
+                            </div>
+                        ) : (
+                            /* Workflow View */
+                            <div className="p-6 overflow-y-auto max-h-[600px]">
+                                <WorkflowView steps={testCase.steps} />
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

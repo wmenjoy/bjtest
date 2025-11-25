@@ -1,0 +1,125 @@
+{
+  "name": "User Authentication and Profile Workflow",
+  "version": "1.0.0",
+  "variables": {
+    "baseURL": "https://api.example.com",
+    "username": "testuser@example.com",
+    "password": "secret123"
+  },
+  "steps": {
+    "step-login": {
+      "id": "step-login",
+      "name": "User Login",
+      "type": "http",
+      "config": {
+        "method": "POST",
+        "url": "{{baseURL}}/auth/login",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "username": "{{username}}",
+          "password": "{{password}}"
+        }
+      }
+    },
+    "step-get-profile": {
+      "id": "step-get-profile",
+      "name": "Get User Profile",
+      "type": "http",
+      "dependsOn": ["step-login"],
+      "config": {
+        "method": "GET",
+        "url": "{{baseURL}}/users/{{userId}}",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "dataMappers": [
+        {
+          "id": "mapper-auth-token",
+          "sourceStep": "step-login",
+          "sourcePath": "output.response.body.token",
+          "targetParam": "Authorization",
+          "transform": "uppercase"
+        },
+        {
+          "id": "mapper-user-id",
+          "sourceStep": "step-login",
+          "sourcePath": "output.response.body.userId",
+          "targetParam": "userId"
+        }
+      ]
+    },
+    "step-update-profile": {
+      "id": "step-update-profile",
+      "name": "Update User Profile",
+      "type": "http",
+      "dependsOn": ["step-get-profile"],
+      "config": {
+        "method": "PUT",
+        "url": "{{baseURL}}/users/{{userId}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "displayName": "{{trimmedName}}",
+          "age": "{{numericAge}}"
+        }
+      },
+      "dataMappers": [
+        {
+          "id": "mapper-auth-header",
+          "sourceStep": "step-login",
+          "sourcePath": "output.response.body.token",
+          "targetParam": "Authorization"
+        },
+        {
+          "id": "mapper-user-id-2",
+          "sourceStep": "step-login",
+          "sourcePath": "output.response.body.userId",
+          "targetParam": "userId"
+        },
+        {
+          "id": "mapper-display-name",
+          "sourceStep": "step-get-profile",
+          "sourcePath": "output.response.body.displayName",
+          "targetParam": "trimmedName",
+          "transform": "trim"
+        },
+        {
+          "id": "mapper-age",
+          "sourceStep": "step-get-profile",
+          "sourcePath": "output.response.body.age",
+          "targetParam": "numericAge",
+          "transform": "parseInt"
+        }
+      ]
+    },
+    "step-verify": {
+      "id": "step-verify",
+      "name": "Verify Update",
+      "type": "assert",
+      "dependsOn": ["step-update-profile"],
+      "config": {
+        "assertions": [
+          {
+            "type": "equals",
+            "actual": "{{statusCode}}",
+            "expected": 200,
+            "message": "Update should return status 200"
+          }
+        ]
+      },
+      "dataMappers": [
+        {
+          "id": "mapper-status-code",
+          "sourceStep": "step-update-profile",
+          "sourcePath": "output.response.status",
+          "targetParam": "statusCode",
+          "transform": "parseInt"
+        }
+      ]
+    }
+  }
+}

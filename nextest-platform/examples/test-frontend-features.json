@@ -1,0 +1,502 @@
+{
+  "description": "测试前端 UI 功能的测试案例",
+  "features": [
+    "Simple Mode 编辑器测试",
+    "Advanced DAG 编辑器测试",
+    "DataMapper 拖拽测试",
+    "模式切换测试",
+    "Template vs Inline 模式测试"
+  ],
+  "testGroups": [
+    {
+      "groupId": "group-frontend-ui",
+      "parentId": null,
+      "name": "Frontend UI Tests",
+      "description": "测试前端编辑器功能",
+      "folderType": "service"
+    },
+    {
+      "groupId": "group-simple-mode",
+      "parentId": "group-frontend-ui",
+      "name": "Simple Mode Tests",
+      "description": "Simple List Editor 功能测试",
+      "folderType": "module"
+    },
+    {
+      "groupId": "group-advanced-mode",
+      "parentId": "group-frontend-ui",
+      "name": "Advanced Mode Tests",
+      "description": "Advanced DAG Editor 功能测试",
+      "folderType": "module"
+    },
+    {
+      "groupId": "group-data-mapper",
+      "parentId": "group-frontend-ui",
+      "name": "DataMapper Tests",
+      "description": "DataMapper 数据流映射功能测试",
+      "folderType": "module"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "workflow-simple-linear",
+      "name": "Simple Linear Workflow",
+      "description": "简单的线性工作流，适合 Simple Mode 编辑",
+      "version": "1.0.0",
+      "steps": [
+        {
+          "id": "step-1",
+          "name": "Initialize",
+          "type": "command",
+          "config": {
+            "cmd": "echo",
+            "args": ["Workflow started"]
+          },
+          "outputs": {
+            "result": "initResult"
+          }
+        },
+        {
+          "id": "step-2",
+          "name": "Fetch Data",
+          "type": "http",
+          "config": {
+            "method": "GET",
+            "url": "http://localhost:8090/health",
+            "headers": {}
+          },
+          "outputs": {
+            "response.status": "fetchStatus",
+            "response.body": "fetchData"
+          }
+        },
+        {
+          "id": "step-3",
+          "name": "Process Data",
+          "type": "command",
+          "config": {
+            "cmd": "echo",
+            "args": ["Processing data"]
+          },
+          "dataMappers": [
+            {
+              "id": "mapper-simple-1",
+              "sourceStep": "step-2",
+              "sourcePath": "fetchData.status",
+              "targetParam": "statusValue",
+              "transform": "uppercase"
+            }
+          ]
+        },
+        {
+          "id": "step-4",
+          "name": "Finalize",
+          "type": "command",
+          "config": {
+            "cmd": "echo",
+            "args": ["Workflow completed"]
+          }
+        }
+      ]
+    },
+    {
+      "workflowId": "workflow-complex-dag",
+      "name": "Complex DAG Workflow",
+      "description": "复杂的 DAG 工作流，需要 Advanced Mode 编辑",
+      "version": "1.0.0",
+      "steps": [
+        {
+          "id": "step-start",
+          "name": "Start",
+          "type": "command",
+          "config": {
+            "cmd": "echo",
+            "args": ["DAG Workflow Started"]
+          },
+          "position": {
+            "x": 250,
+            "y": 50
+          }
+        },
+        {
+          "id": "step-parallel-a",
+          "name": "Parallel Task A",
+          "type": "http",
+          "dependsOn": ["step-start"],
+          "config": {
+            "method": "GET",
+            "url": "http://localhost:8090/api/v2/groups/tree",
+            "headers": {}
+          },
+          "outputs": {
+            "response.body": "groupsData"
+          },
+          "position": {
+            "x": 100,
+            "y": 200
+          }
+        },
+        {
+          "id": "step-parallel-b",
+          "name": "Parallel Task B",
+          "type": "http",
+          "dependsOn": ["step-start"],
+          "config": {
+            "method": "GET",
+            "url": "http://localhost:8090/api/v2/tests",
+            "headers": {}
+          },
+          "outputs": {
+            "response.body": "testsData"
+          },
+          "position": {
+            "x": 400,
+            "y": 200
+          }
+        },
+        {
+          "id": "step-branch",
+          "name": "Conditional Branch",
+          "type": "branch",
+          "dependsOn": ["step-parallel-a", "step-parallel-b"],
+          "branches": [
+            {
+              "condition": "{{groupsData.length}} > 0",
+              "label": "Has Groups",
+              "children": [
+                {
+                  "id": "step-process-groups",
+                  "name": "Process Groups",
+                  "type": "command",
+                  "config": {
+                    "cmd": "echo",
+                    "args": ["Processing groups"]
+                  }
+                }
+              ]
+            },
+            {
+              "condition": "{{groupsData.length}} == 0",
+              "label": "No Groups",
+              "children": [
+                {
+                  "id": "step-create-default-group",
+                  "name": "Create Default Group",
+                  "type": "http",
+                  "config": {
+                    "method": "POST",
+                    "url": "http://localhost:8090/api/v2/groups",
+                    "headers": {
+                      "Content-Type": "application/json"
+                    },
+                    "body": {
+                      "groupId": "default-group",
+                      "name": "Default Group",
+                      "folderType": "folder"
+                    }
+                  }
+                }
+              ]
+            }
+          ],
+          "position": {
+            "x": 250,
+            "y": 350
+          }
+        },
+        {
+          "id": "step-loop",
+          "name": "Loop Processing",
+          "type": "group",
+          "dependsOn": ["step-branch"],
+          "loop": {
+            "type": "forEach",
+            "items": "{{testsData.tests}}",
+            "itemVar": "test",
+            "maxIterations": 5
+          },
+          "children": [
+            {
+              "id": "step-process-test",
+              "name": "Process Test",
+              "type": "command",
+              "config": {
+                "cmd": "echo",
+                "args": ["Processing test: {{test.name}}"]
+              }
+            }
+          ],
+          "position": {
+            "x": 250,
+            "y": 500
+          }
+        },
+        {
+          "id": "step-merge",
+          "name": "Merge Results",
+          "type": "merge",
+          "dependsOn": ["step-loop"],
+          "config": {
+            "strategy": "all"
+          },
+          "position": {
+            "x": 250,
+            "y": 650
+          }
+        },
+        {
+          "id": "step-end",
+          "name": "End",
+          "type": "command",
+          "dependsOn": ["step-merge"],
+          "config": {
+            "cmd": "echo",
+            "args": ["DAG Workflow Completed"]
+          },
+          "position": {
+            "x": 250,
+            "y": 800
+          }
+        }
+      ]
+    },
+    {
+      "workflowId": "workflow-datamapper-demo",
+      "name": "DataMapper Demonstration",
+      "description": "演示 DataMapper 所有功能：拖拽映射、转换函数、优先级",
+      "version": "1.0.0",
+      "steps": [
+        {
+          "id": "step-source",
+          "name": "Source Step (Provides Data)",
+          "type": "http",
+          "config": {
+            "method": "POST",
+            "url": "http://localhost:8090/api/v2/tests",
+            "headers": {
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "testId": "temp-test",
+              "groupId": "group-demo-workflow",
+              "name": "  Temporary Test  ",
+              "type": "http",
+              "priority": "p2",
+              "status": "active"
+            }
+          },
+          "outputs": {
+            "response.status": "createStatus",
+            "response.body.testId": "testId",
+            "response.body.name": "testName",
+            "response.body.priority": "priority"
+          }
+        },
+        {
+          "id": "step-target-with-datamapper",
+          "name": "Target Step (Uses DataMapper)",
+          "type": "http",
+          "dependsOn": ["step-source"],
+          "config": {
+            "method": "GET",
+            "url": "http://localhost:8090/api/v2/tests/{{testIdProcessed}}",
+            "headers": {}
+          },
+          "dataMappers": [
+            {
+              "id": "dm-1",
+              "sourceStep": "step-source",
+              "sourcePath": "testId",
+              "targetParam": "testIdProcessed",
+              "transform": ""
+            },
+            {
+              "id": "dm-2",
+              "sourceStep": "step-source",
+              "sourcePath": "testName",
+              "targetParam": "nameUppercase",
+              "transform": "uppercase"
+            },
+            {
+              "id": "dm-3",
+              "sourceStep": "step-source",
+              "sourcePath": "testName",
+              "targetParam": "nameTrimmed",
+              "transform": "trim"
+            },
+            {
+              "id": "dm-4",
+              "sourceStep": "step-source",
+              "sourcePath": "priority",
+              "targetParam": "priorityUpper",
+              "transform": "uppercase"
+            },
+            {
+              "id": "dm-5",
+              "sourceStep": "step-source",
+              "sourcePath": "createStatus",
+              "targetParam": "statusCode",
+              "transform": "parseInt"
+            }
+          ],
+          "outputs": {
+            "response.status": "getStatus"
+          }
+        },
+        {
+          "id": "step-verify-transforms",
+          "name": "Verify Transform Results",
+          "type": "command",
+          "dependsOn": ["step-target-with-datamapper"],
+          "config": {
+            "cmd": "echo",
+            "args": [
+              "Transforms: nameUppercase={{nameUppercase}}, nameTrimmed={{nameTrimmed}}, priorityUpper={{priorityUpper}}, statusCode={{statusCode}}"
+            ]
+          },
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{priorityUpper}}",
+              "expected": "P2",
+              "message": "Priority should be uppercase P2"
+            },
+            {
+              "type": "equals",
+              "actual": "{{statusCode}}",
+              "expected": 201,
+              "message": "Status code should be integer 201"
+            }
+          ]
+        },
+        {
+          "id": "step-cleanup",
+          "name": "Cleanup Test",
+          "type": "http",
+          "dependsOn": ["step-verify-transforms"],
+          "config": {
+            "method": "DELETE",
+            "url": "http://localhost:8090/api/v2/tests/{{testIdProcessed}}",
+            "headers": {}
+          },
+          "onError": "continue"
+        }
+      ]
+    },
+    {
+      "workflowId": "workflow-template-vs-inline",
+      "name": "Template vs Inline Mode Demo",
+      "description": "演示 Action Template 模式和 Inline 模式的对比",
+      "version": "1.0.0",
+      "steps": [
+        {
+          "id": "step-template-mode",
+          "name": "Using Action Template (Recommended)",
+          "type": "http",
+          "actionTemplateId": "action-http-get",
+          "actionVersion": "1.0.0",
+          "inputs": {
+            "url": "http://localhost:8090/api/v2/groups/tree",
+            "headers": "{}"
+          },
+          "outputs": {
+            "statusCode": "templateStatus",
+            "body": "templateData"
+          },
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{templateStatus}}",
+              "expected": 200,
+              "message": "Template mode should work"
+            }
+          ]
+        },
+        {
+          "id": "step-inline-mode",
+          "name": "Using Inline Config (Backward Compatible)",
+          "type": "http",
+          "config": {
+            "method": "GET",
+            "url": "http://localhost:8090/api/v2/tests",
+            "headers": {}
+          },
+          "outputs": {
+            "response.status": "inlineStatus",
+            "response.body": "inlineData"
+          },
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{inlineStatus}}",
+              "expected": 200,
+              "message": "Inline mode should work"
+            }
+          ]
+        },
+        {
+          "id": "step-compare",
+          "name": "Compare Results",
+          "type": "command",
+          "dependsOn": ["step-template-mode", "step-inline-mode"],
+          "config": {
+            "cmd": "echo",
+            "args": [
+              "Template Status: {{templateStatus}}, Inline Status: {{inlineStatus}}"
+            ]
+          },
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{templateStatus}}",
+              "expected": "{{inlineStatus}}",
+              "message": "Both modes should return same status"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "testCases": [
+    {
+      "testId": "test-simple-mode-editor",
+      "groupId": "group-simple-mode",
+      "name": "Simple Mode Editor Test",
+      "type": "workflow",
+      "priority": "P1",
+      "status": "active",
+      "objective": "验证 Simple Mode 列表编辑器的功能",
+      "workflowId": "workflow-simple-linear"
+    },
+    {
+      "testId": "test-advanced-dag-editor",
+      "groupId": "group-advanced-mode",
+      "name": "Advanced DAG Editor Test",
+      "type": "workflow",
+      "priority": "P1",
+      "status": "active",
+      "objective": "验证 Advanced DAG 编辑器的可视化功能",
+      "workflowId": "workflow-complex-dag"
+    },
+    {
+      "testId": "test-datamapper-features",
+      "groupId": "group-data-mapper",
+      "name": "DataMapper Features Test",
+      "type": "workflow",
+      "priority": "P1",
+      "status": "active",
+      "objective": "验证 DataMapper 的拖拽、映射和转换功能",
+      "workflowId": "workflow-datamapper-demo"
+    },
+    {
+      "testId": "test-mode-switching",
+      "groupId": "group-frontend-ui",
+      "name": "Template vs Inline Mode Test",
+      "type": "workflow",
+      "priority": "P1",
+      "status": "active",
+      "objective": "验证 Action Template 和 Inline 模式的切换",
+      "workflowId": "workflow-template-vs-inline"
+    }
+  ]
+}

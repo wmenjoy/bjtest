@@ -1,15 +1,19 @@
 
 import React, { useState } from 'react';
-import { TestFolder } from '../../types';
-import { Folder, Layout, ChevronDown, ChevronRight, Plus } from 'lucide-react';
+import { TestFolder, TestCase } from '../../types';
+import { Folder, Layout, ChevronDown, ChevronRight, Plus, FileText } from 'lucide-react';
 import { useConfig } from '../../ConfigContext';
 import { QuickFilter } from './QuickFilter';
 import { TestStatistics } from '../../services/api/testCaseStatsApi';
 
 interface FolderTreeProps {
     folders: TestFolder[];
+    cases: TestCase[];
     selectedFolderId: string;
+    selectedCaseId?: string | null;
     onSelectFolder: (id: string) => void;
+    onSelectCase: (testCase: TestCase) => void;
+    onEditCase: (testCase: TestCase) => void;
     onAddFolder: (type: 'service' | 'module') => void;
     statistics?: TestStatistics | null;
     statsLoading?: boolean;
@@ -18,11 +22,15 @@ interface FolderTreeProps {
 const FolderItem: React.FC<{
     folder: TestFolder;
     selectedFolderId: string;
+    selectedCaseId?: string | null;
     onSelect: (id: string) => void;
+    onSelectCase: (testCase: TestCase) => void;
+    onEditCase: (testCase: TestCase) => void;
     level: number;
     childrenFolders: TestFolder[];
     allFolders: TestFolder[];
-}> = ({ folder, selectedFolderId, onSelect, level, childrenFolders, allFolders }) => {
+    cases: TestCase[];
+}> = ({ folder, selectedFolderId, selectedCaseId, onSelect, onSelectCase, onEditCase, level, childrenFolders, allFolders, cases }) => {
     const [isExpanded, setIsExpanded] = useState(true);
     const hasChildren = childrenFolders.length > 0;
 
@@ -45,21 +53,60 @@ const FolderItem: React.FC<{
                 <span className="text-sm truncate">{folder.name}</span>
             </div>
             {isExpanded && childrenFolders.map(child => (
-                <FolderItem 
-                    key={child.id} 
-                    folder={child} 
-                    selectedFolderId={selectedFolderId} 
-                    onSelect={onSelect} 
-                    level={level + 1} 
+                <FolderItem
+                    key={child.id}
+                    folder={child}
+                    selectedFolderId={selectedFolderId}
+                    selectedCaseId={selectedCaseId}
+                    onSelect={onSelect}
+                    onSelectCase={onSelectCase}
+                    onEditCase={onEditCase}
+                    level={level + 1}
                     allFolders={allFolders}
                     childrenFolders={getChildFolders(child.id)}
+                    cases={cases}
                 />
             ))}
+            {/* 该文件夹的案例列表 - 新增 */}
+            {isExpanded && cases
+                .filter(c => c.folderId === folder.id)
+                .map(testCase => (
+                    <div
+                        key={testCase.id}
+                        className={`flex items-center px-3 py-1.5 cursor-pointer group ${
+                            selectedCaseId === testCase.id
+                                ? 'bg-blue-50 text-blue-700'
+                                : 'hover:bg-slate-50 text-slate-700'
+                        }`}
+                        style={{ paddingLeft: `${(level + 1) * 12 + 20}px` }}
+                        onClick={() => onSelectCase(testCase)}
+                        onDoubleClick={() => onEditCase(testCase)}
+                    >
+                        <FileText size={14} className="mr-2 flex-shrink-0 text-slate-400" />
+                        <span className="text-xs truncate flex-1">
+                            {testCase.title || 'Untitled Test'}
+                        </span>
+                        <span className="text-[10px] text-slate-400 ml-1">
+                            {testCase.steps?.length || 0}
+                        </span>
+                    </div>
+                ))}
         </div>
     );
 };
 
-export const FolderTree: React.FC<FolderTreeProps> = ({ folders, selectedFolderId, onSelectFolder, onAddFolder, statistics, statsLoading }) => {
+export const FolderTree: React.FC<FolderTreeProps> = ({
+    folders,
+    cases,
+    selectedFolderId,
+    selectedCaseId,
+    onSelectFolder,
+    onSelectCase,
+    onEditCase,
+    onAddFolder,
+    statistics,
+    statsLoading
+}) => {
     const { t } = useConfig();
     const rootFolders = folders.filter(f => f.parentId === 'root');
 
@@ -97,9 +144,13 @@ export const FolderTree: React.FC<FolderTreeProps> = ({ folders, selectedFolderI
                         key={f.id}
                         folder={f}
                         selectedFolderId={selectedFolderId}
+                        selectedCaseId={selectedCaseId}
                         onSelect={onSelectFolder}
+                        onSelectCase={onSelectCase}
+                        onEditCase={onEditCase}
                         allFolders={folders}
                         childrenFolders={folders.filter(child => child.parentId === f.id)}
+                        cases={cases}
                         level={0}
                     />
                 ))}

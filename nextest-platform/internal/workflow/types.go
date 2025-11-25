@@ -2,6 +2,7 @@ package workflow
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"test-management-service/internal/models"
@@ -95,12 +96,38 @@ type ExecutionContext struct {
 	Evaluator   interface{} // *expression.Evaluator (使用interface避免循环依赖)
 }
 
+// GetStepResult retrieves the execution result of a specific step
+func (ctx *ExecutionContext) GetStepResult(stepID string) *StepExecutionResult {
+	if ctx.StepResults == nil {
+		return nil
+	}
+	return ctx.StepResults[stepID]
+}
+
 // StepExecutionResult tracks individual step results
 type StepExecutionResult struct {
 	Status   string
 	Duration int
 	Output   map[string]interface{}
 	Error    string
+}
+
+// JSON converts StepExecutionResult to JSON string for gjson querying
+func (s *StepExecutionResult) JSON() (string, error) {
+	// Create a complete representation of the step result
+	data := map[string]interface{}{
+		"status":   s.Status,
+		"duration": s.Duration,
+		"output":   s.Output,
+		"error":    s.Error,
+	}
+
+	jsonBytes, err := json.Marshal(data)
+	if err != nil {
+		return "", err
+	}
+
+	return string(jsonBytes), nil
 }
 
 // VariableChangeTracker tracks variable mutations
@@ -123,6 +150,7 @@ type WorkflowStep struct {
 	ActionVersion    string                 `json:"actionVersion,omitempty"`    // Optional version constraint
 	Inputs           map[string]string      `json:"inputs,omitempty"`           // Parameter values for template
 	Outputs          map[string]string      `json:"outputs,omitempty"`          // Output variable mappings
+	DataMappers      []DataMapper           `json:"dataMappers,omitempty"`      // Visual data mapping configurations
 
 	// === 条件执行 ===
 	When      string                 `json:"when,omitempty"` // Condition expression
@@ -156,4 +184,14 @@ type WorkflowDefinition struct {
 	Version   string                    `json:"version"`
 	Variables map[string]interface{}    `json:"variables"`
 	Steps     map[string]*WorkflowStep  `json:"steps"`
+}
+
+// DataMapper defines data mapping configuration for visual workflow builder
+// Supports JSONPath extraction from source step outputs with optional transformations
+type DataMapper struct {
+	ID          string `json:"id"`                    // Unique mapper ID
+	SourceStep  string `json:"sourceStep"`            // Source step ID (e.g., "step-login")
+	SourcePath  string `json:"sourcePath"`            // JSONPath to extract (e.g., "output.response.body.token")
+	TargetParam string `json:"targetParam"`           // Target parameter name (e.g., "authToken")
+	Transform   string `json:"transform,omitempty"`   // Optional transformation: "uppercase" | "lowercase" | "trim" | "parseInt" | "parseFloat"
 }

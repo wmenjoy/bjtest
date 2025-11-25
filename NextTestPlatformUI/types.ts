@@ -648,6 +648,69 @@ export interface Assertion {
   message?: string;
 }
 
+// ===== ENHANCED ASSERTION TYPES (Phase 1) =====
+
+/**
+ * Atomic Assertion - Single validation rule
+ * Represents one atomic validation check on a target value
+ */
+export interface AtomicAssertion {
+  /** Unique identifier */
+  id: string;
+
+  /** Assertion category */
+  type: 'value' | 'structure' | 'type' | 'pattern';
+
+  /** Target expression (supports JSONPath and variable references) */
+  target: string;  // e.g., "{{response.body.user.email}}"
+
+  /** Comparison operator */
+  operator: Operator;
+
+  /** Expected value (some operators don't require this) */
+  expected?: any;
+
+  /** Custom failure message */
+  message?: string;
+
+  /** Severity level */
+  severity?: 'error' | 'warning' | 'info';
+
+  /** Whether to continue execution if this assertion fails */
+  continueOnFailure?: boolean;
+}
+
+/**
+ * Operator Types - Common validation operators
+ * Simplified to 10 most common operators for Phase 1
+ */
+export type Operator =
+  // Equality
+  | 'equals' | 'notEquals'
+  // Comparison
+  | 'greaterThan' | 'lessThan'
+  // String/Array operations
+  | 'contains' | 'notContains'
+  // Existence
+  | 'exists' | 'notExists'
+  // Pattern matching
+  | 'matchesRegex'
+  // Array operations
+  | 'arrayLength';
+
+/**
+ * Step Type Definition
+ * Each step must have exactly one type
+ */
+export type StepType =
+  | 'http'       // HTTP请求
+  | 'command'    // 命令执行
+  | 'assertion'  // 断言验证
+  | 'loop'       // 循环控制
+  | 'branch'     // 条件分支
+  | 'merge'      // 合并节点
+  | 'group';     // 步骤组
+
 /**
  * Unified Workflow Step
  * Replaces TestStep with richer structure supporting:
@@ -660,7 +723,7 @@ export interface Assertion {
 export interface WorkflowStep {
   id: string;
   name?: string; // Optional for backward compatibility
-  type?: string; // Optional for backward compatibility - http, command, database, script, branch, loop, merge
+  type: StepType; // Step type - required field
 
   // 【核心】两种配置方式（互斥）
   // Method 1: Reference Action Template (recommended)
@@ -678,8 +741,8 @@ export interface WorkflowStep {
   // Control Flow
   condition?: string; // Condition expression for execution
   dependsOn?: string[]; // Step IDs that must complete before this step (DAG)
-  loop?: LoopConfig; // Loop configuration
-  branches?: BranchConfig[]; // Branch configuration
+  // loop?: LoopConfig; // DEPRECATED: Use type='loop' with config instead
+  // branches?: BranchConfig[]; // DEPRECATED: Use type='branch' with config instead
   children?: WorkflowStep[]; // Nested steps (for branch children, loop body, group) - complete objects, not IDs
 
   // Error Handling
@@ -722,6 +785,47 @@ export interface WorkflowStep {
  * TestStep is now an alias for WorkflowStep
  */
 export type TestStep = WorkflowStep;
+
+// ===== DATA MAPPER TYPES =====
+
+/**
+ * Data Binding for visual data flow configuration
+ * Maps output from a source step to input parameter of target step
+ */
+export interface DataBinding {
+  /** Unique identifier for this binding */
+  id: string;
+
+  /** Source step ID */
+  sourceStepId: string;
+  /** JSONPath to the output field, e.g., "response.body.token" */
+  sourcePath: string;
+  /** Source data type */
+  sourceType?: string;
+
+  /** Target step ID */
+  targetStepId: string;
+  /** Target input parameter name */
+  targetParam: string;
+  /** Target data type */
+  targetType?: string;
+
+  /** Optional transform function */
+  transform?: DataTransform;
+}
+
+/**
+ * Data Transform configuration
+ * Supports built-in functions or template strings
+ */
+export interface DataTransform {
+  /** Transform type */
+  type: 'function' | 'template';
+  /** Built-in function name */
+  function?: 'uppercase' | 'lowercase' | 'parseInt' | 'trim' | 'parseFloat' | 'toString';
+  /** Template string, e.g., "Bearer {{value}}" */
+  template?: string;
+}
 
 /**
  * Workflow Definition (Unified)

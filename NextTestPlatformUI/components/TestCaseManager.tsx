@@ -5,7 +5,6 @@ import { TestRunner } from './TestRunner';
 import { generateTestCase } from '../services/geminiService';
 import { TestCaseEditor } from './testcase/TestCaseEditor';
 import { FolderTree } from './testcase/FolderTree';
-import { CaseList } from './testcase/CaseList';
 import { CaseDetail } from './testcase/CaseDetail';
 import { AIGeneratorModal } from './testcase/AIGeneratorModal';
 import { Toast } from './ui/LoadingState';
@@ -165,57 +164,63 @@ export const TestCaseManager: React.FC<TestCaseManagerProps> = ({ cases, folders
   };
 
   return (
-    <div className="flex h-[calc(100vh-140px)] bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-      
-      <FolderTree
-        folders={folders}
-        selectedFolderId={selectedFolderId}
-        onSelectFolder={setSelectedFolderId}
-        onAddFolder={handleAddFolder}
-        statistics={statistics}
-        statsLoading={statsLoading}
-      />
+    <div className="flex h-[calc(100vh-140px)] bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
 
-      <CaseList 
-        cases={filteredCases} 
-        selectedCaseId={selectedCase?.id || null} 
-        onSelectCase={setSelectedCase}
-        onEditCase={(c) => { setSelectedCase(c); setIsEditing(true); }}
-        onAddCase={openNewCaseModal}
-        onGenerateAI={() => setShowAiModal(true)}
-      />
+      {/* 左栏: 增强的FolderTree (固定350px宽度) */}
+      <div className="w-[350px] border-r border-slate-200 flex-shrink-0">
+        <FolderTree
+          folders={folders}
+          cases={cases}
+          selectedFolderId={selectedFolderId}
+          selectedCaseId={selectedCase?.id || null}
+          onSelectFolder={setSelectedFolderId}
+          onSelectCase={setSelectedCase}
+          onEditCase={(c) => { setSelectedCase(c); setIsEditing(true); }}
+          onAddFolder={handleAddFolder}
+          statistics={statistics}
+          statsLoading={statsLoading}
+        />
+      </div>
 
-      <CaseDetail
-        testCase={selectedCase}
-        onEdit={() => setIsEditing(true)}
-        onRun={() => setIsRunning(true)}
-        onDelete={handleDeleteCase}
-      />
+      {/* 右栏: 案例详情 (占据剩余空间) */}
+      <div className="flex-1 overflow-hidden">
+        <CaseDetail
+          testCase={selectedCase}
+          onEdit={() => setIsEditing(true)}
+          onRun={() => setIsRunning(true)}
+          onDelete={handleDeleteCase}
+        />
+      </div>
 
+      {/* 编辑器 (右侧滑入，70%宽度，不遮挡左栏) */}
       {isEditing && selectedCase && (
-          <TestCaseEditor 
-            initialCase={selectedCase} 
+        <div className="absolute right-0 top-0 bottom-0 w-[70%] bg-white shadow-2xl z-30 border-l border-slate-300 animate-slide-in-right">
+          <TestCaseEditor
+            initialCase={selectedCase}
             availableScripts={scripts}
             availableWorkflows={workflows}
-            onSave={handleSaveCase} 
-            onCancel={() => setIsEditing(false)} 
+            onSave={handleSaveCase}
+            onCancel={() => setIsEditing(false)}
           />
-      )}
-      
-      {isRunning && selectedCase && (
-          <TestRunner 
-            testCase={selectedCase}
-            scripts={scripts}
-            workflows={workflows}
-            activeEnvironment={activeEnvironment}
-            onComplete={(run) => {
-                onRunComplete(run);
-                setIsRunning(false);
-            }}
-            onCancel={() => setIsRunning(false)}
-          />
+        </div>
       )}
 
+      {/* TestRunner模态框 (保持不变) */}
+      {isRunning && selectedCase && (
+        <TestRunner
+          testCase={selectedCase}
+          scripts={scripts}
+          workflows={workflows}
+          activeEnvironment={activeEnvironment}
+          onComplete={(run) => {
+            onRunComplete(run);
+            setIsRunning(false);
+          }}
+          onCancel={() => setIsRunning(false)}
+        />
+      )}
+
+      {/* AI生成器模态框 (保持不变) */}
       <AIGeneratorModal
         isOpen={showAiModal}
         onClose={() => setShowAiModal(false)}
@@ -223,7 +228,7 @@ export const TestCaseManager: React.FC<TestCaseManagerProps> = ({ cases, folders
         isGenerating={isGenerating}
       />
 
-      {/* Toast Notification */}
+      {/* Toast通知 (保持不变) */}
       {toast && (
         <Toast
           message={toast.message}

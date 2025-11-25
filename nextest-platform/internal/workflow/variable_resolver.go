@@ -3,8 +3,59 @@ package workflow
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
+
+	"github.com/tidwall/gjson"
 )
+
+// TransformFunc defines a function that transforms a value
+type TransformFunc func(interface{}) interface{}
+
+// Built-in transformation functions
+var builtInTransforms = map[string]TransformFunc{
+	"uppercase":  func(v interface{}) interface{} { return strings.ToUpper(fmt.Sprintf("%v", v)) },
+	"lowercase":  func(v interface{}) interface{} { return strings.ToLower(fmt.Sprintf("%v", v)) },
+	"trim":       func(v interface{}) interface{} { return strings.TrimSpace(fmt.Sprintf("%v", v)) },
+	"parseInt":   parseIntTransform,
+	"parseFloat": parseFloatTransform,
+}
+
+// parseIntTransform converts value to integer
+func parseIntTransform(v interface{}) interface{} {
+	switch val := v.(type) {
+	case int, int64, int32:
+		return val
+	case float64:
+		return int(val)
+	case float32:
+		return int(val)
+	case string:
+		if i, err := strconv.ParseInt(val, 10, 64); err == nil {
+			return int(i)
+		}
+	}
+	return 0
+}
+
+// parseFloatTransform converts value to float
+func parseFloatTransform(v interface{}) interface{} {
+	switch val := v.(type) {
+	case float64, float32:
+		return val
+	case int:
+		return float64(val)
+	case int64:
+		return float64(val)
+	case int32:
+		return float64(val)
+	case string:
+		if f, err := strconv.ParseFloat(val, 64); err == nil {
+			return f
+		}
+	}
+	return 0.0
+}
 
 // VariableResolver handles variable interpolation in workflow configurations
 // Supports {{variableName}} syntax for variable references
@@ -153,4 +204,63 @@ func navigatePath(data interface{}, path string) interface{} {
 	}
 
 	return current
+}
+
+// ResolveStepInputs resolves step inputs with DataMapper priority
+// DataMappers (visual configuration) take precedence over Inputs (manual references)
+func (r *VariableResolver) ResolveStepInputs(step *WorkflowStep, ctx *ExecutionContext) (map[string]interface{}, error) {
+	resolved := make(map[string]interface{})
+
+	// 1. Priority: Use DataMappers (visual configuration)
+	for _, mapper := range step.DataMappers {
+		value, err := r.resolveDataMapper(&mapper, ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve mapper %s: %w", mapper.ID, err)
+		}
+		resolved[mapper.TargetParam] = value
+	}
+
+	// 2. Fallback: Use Inputs (manual references) - only if not already set by DataMappers
+	for paramName, paramValue := range step.Inputs {
+		if _, exists := resolved[paramName]; !exists {
+			resolved[paramName] = r.Resolve(paramValue, ctx)
+		}
+	}
+
+	return resolved, nil
+}
+
+// resolveDataMapper resolves a single DataMapper configuration
+// Extracts value from source step output using JSONPath and applies optional transformations
+func (r *VariableResolver) resolveDataMapper(mapper *DataMapper, ctx *ExecutionContext) (interface{}, error) {
+	// 1. Get source step result from execution context
+	sourceStepResult := ctx.GetStepResult(mapper.SourceStep)
+	if sourceStepResult == nil {
+		return nil, fmt.Errorf("source step %s not found", mapper.SourceStep)
+	}
+
+	// 2. Convert StepExecutionResult to JSON string for gjson querying
+	jsonStr, err := sourceStepResult.JSON()
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert step result to JSON: %w", err)
+	}
+
+	// 3. Use JSONPath to extract value from source step output
+	result := gjson.Get(jsonStr, mapper.SourcePath)
+	if !result.Exists() {
+		return nil, fmt.Errorf("path %s not found in step %s output", mapper.SourcePath, mapper.SourceStep)
+	}
+
+	value := result.Value()
+
+	// 4. Apply transformation function if specified
+	if mapper.Transform != "" {
+		transformFunc, ok := builtInTransforms[mapper.Transform]
+		if !ok {
+			return nil, fmt.Errorf("unknown transform function: %s", mapper.Transform)
+		}
+		value = transformFunc(value)
+	}
+
+	return value, nil
 }
