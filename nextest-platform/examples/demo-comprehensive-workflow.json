@@ -1,0 +1,275 @@
+{
+  "description": "演示统一 Workflow 架构的所有功能",
+  "features": [
+    "Action Template 引用模式",
+    "DataMapper 数据流映射",
+    "转换函数 (uppercase, lowercase, parseInt)",
+    "条件分支",
+    "循环",
+    "并行执行（dependsOn）",
+    "错误处理和重试"
+  ],
+  "testGroups": [
+    {
+      "groupId": "group-demo-workflow",
+      "parentId": null,
+      "name": "Workflow Architecture Demo",
+      "description": "演示统一 Workflow 架构的完整功能",
+      "folderType": "service"
+    }
+  ],
+  "workflows": [
+    {
+      "workflowId": "workflow-comprehensive-demo",
+      "name": "Comprehensive Workflow Demo",
+      "description": "演示所有新功能：Action Template、DataMapper、分支、循环、并行",
+      "version": "1.0.0",
+      "steps": [
+        {
+          "id": "step-1-health-check",
+          "name": "Step 1: Health Check (Template Mode)",
+          "type": "http",
+          "actionTemplateId": "action-http-get",
+          "actionVersion": "1.0.0",
+          "inputs": {
+            "url": "http://localhost:8090/health",
+            "headers": "{}"
+          },
+          "outputs": {
+            "statusCode": "healthCheckStatus",
+            "body": "healthCheckBody"
+          },
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{healthCheckStatus}}",
+              "expected": 200,
+              "message": "Health check should return 200"
+            }
+          ],
+          "onError": "abort"
+        },
+        {
+          "id": "step-2-get-groups",
+          "name": "Step 2: Get Test Groups",
+          "type": "http",
+          "dependsOn": ["step-1-health-check"],
+          "actionTemplateId": "action-http-get",
+          "inputs": {
+            "url": "http://localhost:8090/api/v2/groups/tree",
+            "headers": "{}"
+          },
+          "outputs": {
+            "statusCode": "groupsStatus",
+            "body": "groupsData"
+          },
+          "dataMappers": [
+            {
+              "id": "mapper-1",
+              "sourceStep": "step-1-health-check",
+              "sourcePath": "body.status",
+              "targetParam": "previousStatus",
+              "transform": "uppercase"
+            }
+          ]
+        },
+        {
+          "id": "step-3-parallel-1",
+          "name": "Step 3A: Parallel Task 1 - Get Tests",
+          "type": "http",
+          "dependsOn": ["step-2-get-groups"],
+          "config": {
+            "method": "GET",
+            "url": "http://localhost:8090/api/v2/tests",
+            "headers": {}
+          },
+          "outputs": {
+            "response.status": "testsStatus",
+            "response.body": "testsData"
+          }
+        },
+        {
+          "id": "step-3-parallel-2",
+          "name": "Step 3B: Parallel Task 2 - Get Workflows",
+          "type": "http",
+          "dependsOn": ["step-2-get-groups"],
+          "config": {
+            "method": "GET",
+            "url": "http://localhost:8090/api/v2/workflows",
+            "headers": {}
+          },
+          "outputs": {
+            "response.status": "workflowsStatus",
+            "response.body": "workflowsData"
+          }
+        },
+        {
+          "id": "step-4-merge",
+          "name": "Step 4: Merge Parallel Results",
+          "type": "merge",
+          "dependsOn": ["step-3-parallel-1", "step-3-parallel-2"],
+          "config": {
+            "strategy": "all",
+            "description": "Wait for all parallel tasks to complete"
+          },
+          "dataMappers": [
+            {
+              "id": "mapper-2",
+              "sourceStep": "step-3-parallel-1",
+              "sourcePath": "testsData.total",
+              "targetParam": "totalTests",
+              "transform": "parseInt"
+            },
+            {
+              "id": "mapper-3",
+              "sourceStep": "step-3-parallel-2",
+              "sourcePath": "workflowsData.total",
+              "targetParam": "totalWorkflows",
+              "transform": "parseInt"
+            }
+          ]
+        },
+        {
+          "id": "step-5-conditional-branch",
+          "name": "Step 5: Conditional Branch",
+          "type": "branch",
+          "dependsOn": ["step-4-merge"],
+          "branches": [
+            {
+              "condition": "{{totalTests}} > 0",
+              "label": "Has Tests",
+              "children": [
+                {
+                  "id": "step-5a-process-tests",
+                  "name": "Process Tests",
+                  "type": "command",
+                  "config": {
+                    "cmd": "echo",
+                    "args": ["Found {{totalTests}} tests"]
+                  }
+                }
+              ]
+            },
+            {
+              "condition": "{{totalTests}} == 0",
+              "label": "No Tests",
+              "children": [
+                {
+                  "id": "step-5b-no-tests",
+                  "name": "No Tests Warning",
+                  "type": "command",
+                  "config": {
+                    "cmd": "echo",
+                    "args": ["Warning: No tests found"]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "step-6-loop",
+          "name": "Step 6: Loop Through Groups",
+          "type": "group",
+          "dependsOn": ["step-5-conditional-branch"],
+          "loop": {
+            "type": "forEach",
+            "items": "{{groupsData}}",
+            "itemVar": "currentGroup",
+            "maxIterations": 3
+          },
+          "children": [
+            {
+              "id": "step-6a-process-group",
+              "name": "Process Each Group",
+              "type": "command",
+              "config": {
+                "cmd": "echo",
+                "args": ["Processing group: {{currentGroup.name}}"]
+              },
+              "dataMappers": [
+                {
+                  "id": "mapper-4",
+                  "sourceStep": "step-6-loop",
+                  "sourcePath": "currentGroup.name",
+                  "targetParam": "groupName",
+                  "transform": "trim"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "step-7-create-test-group",
+          "name": "Step 7: Create Test Group (with retry)",
+          "type": "http",
+          "dependsOn": ["step-6-loop"],
+          "config": {
+            "method": "POST",
+            "url": "http://localhost:8090/api/v2/groups",
+            "headers": {
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "groupId": "demo-group-{{timestamp}}",
+              "name": "Demo Test Group",
+              "description": "Created by workflow demo",
+              "folderType": "folder"
+            }
+          },
+          "outputs": {
+            "response.status": "createGroupStatus",
+            "response.body.groupId": "newGroupId"
+          },
+          "onError": "retry",
+          "retryCount": 3,
+          "retryDelay": 1,
+          "timeout": 10,
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{createGroupStatus}}",
+              "expected": 201,
+              "message": "Create group should return 201"
+            }
+          ]
+        },
+        {
+          "id": "step-8-cleanup",
+          "name": "Step 8: Cleanup (always runs)",
+          "type": "http",
+          "dependsOn": ["step-7-create-test-group"],
+          "config": {
+            "method": "DELETE",
+            "url": "http://localhost:8090/api/v2/groups/{{newGroupId}}",
+            "headers": {}
+          },
+          "outputs": {
+            "response.status": "cleanupStatus"
+          },
+          "onError": "continue",
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{cleanupStatus}}",
+              "expected": 200,
+              "message": "Cleanup should return 200"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "testCases": [
+    {
+      "testId": "test-demo-comprehensive-workflow",
+      "groupId": "group-demo-workflow",
+      "name": "Comprehensive Workflow Execution",
+      "type": "workflow",
+      "priority": "P1",
+      "status": "active",
+      "objective": "执行完整的演示工作流，验证所有新功能",
+      "workflowId": "workflow-comprehensive-demo"
+    }
+  ]
+}

@@ -1,6 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import { TestStep } from '../../../types';
 import { StepCard } from './StepCard';
+import { LoopStepCard } from './LoopStepCard';
+import { BranchStepCard } from './BranchStepCard';
 import {
   Plus,
   ChevronDown,
@@ -10,7 +12,8 @@ import {
   Terminal,
   CheckCircle,
   GitBranch,
-  Layers
+  Layers,
+  RefreshCw
 } from 'lucide-react';
 
 interface StepEditorProps {
@@ -25,6 +28,7 @@ const STEP_TYPES = [
   { type: 'http', label: 'HTTP Request', icon: Globe, color: 'emerald' },
   { type: 'command', label: 'Command', icon: Terminal, color: 'orange' },
   { type: 'assert', label: 'Assertion', icon: CheckCircle, color: 'cyan' },
+  { type: 'loop', label: 'Loop', icon: RefreshCw, color: 'blue' },
   { type: 'branch', label: 'Branch', icon: GitBranch, color: 'purple' },
   { type: 'group', label: 'Group', icon: Layers, color: 'slate' }
 ];
@@ -45,12 +49,21 @@ export const StepEditor: React.FC<StepEditorProps> = ({
 
   // Add new step
   const addStep = useCallback((type: string = 'http') => {
+    let defaultConfig: any = {};
+    if (type === 'http') {
+      defaultConfig = { method: 'GET', url: '' };
+    } else if (type === 'loop') {
+      defaultConfig = { type: 'forEach', source: '', itemVar: 'item', maxIterations: 100 };
+    } else if (type === 'branch') {
+      defaultConfig = { branches: [] };
+    }
+
     const newStep: TestStep = {
       id: generateStepId(),
       name: '',
       summary: '',
       type,
-      config: type === 'http' ? { method: 'GET', url: '' } : {}
+      config: defaultConfig
     };
     onChange([...steps, newStep]);
     setShowAddMenu(false);
@@ -176,31 +189,76 @@ export const StepEditor: React.FC<StepEditorProps> = ({
 
           {/* Steps List */}
           <div className="space-y-4">
-            {steps.map((step, index) => (
-              <React.Fragment key={step.id}>
-                {/* Connector Line */}
-                {index > 0 && (
-                  <div className="flex justify-center -my-2">
-                    <div className="w-px h-4 bg-slate-300" />
-                  </div>
-                )}
+            {steps.map((step, index) => {
+              // Render different cards based on step type
+              if (step.type === 'loop') {
+                return (
+                  <React.Fragment key={step.id}>
+                    {/* Connector Line */}
+                    {index > 0 && (
+                      <div className="flex justify-center -my-2">
+                        <div className="w-px h-4 bg-slate-300" />
+                      </div>
+                    )}
 
-                {/* Step Card */}
-                <StepCard
-                  step={step}
-                  index={index}
-                  onChange={(updatedStep) => updateStep(index, updatedStep)}
-                  onDelete={() => deleteStep(index)}
-                  onDuplicate={() => duplicateStep(index)}
-                  variables={getContextVariables(index)}
-                  depth={0}
-                  draggable={!readOnly}
-                  onDragStart={() => handleDragStart(index)}
-                  onDragOver={(e) => handleDragOver(e, index)}
-                  onDragEnd={handleDragEnd}
-                />
-              </React.Fragment>
-            ))}
+                    {/* Loop Step Card */}
+                    <LoopStepCard
+                      step={step}
+                      index={index}
+                      onChange={(updatedStep) => updateStep(index, updatedStep)}
+                      onDelete={() => deleteStep(index)}
+                      onDuplicate={() => duplicateStep(index)}
+                    />
+                  </React.Fragment>
+                );
+              } else if (step.type === 'branch') {
+                return (
+                  <React.Fragment key={step.id}>
+                    {/* Connector Line */}
+                    {index > 0 && (
+                      <div className="flex justify-center -my-2">
+                        <div className="w-px h-4 bg-slate-300" />
+                      </div>
+                    )}
+
+                    {/* Branch Step Card */}
+                    <BranchStepCard
+                      step={step}
+                      index={index}
+                      onChange={(updatedStep) => updateStep(index, updatedStep)}
+                      onDelete={() => deleteStep(index)}
+                      onDuplicate={() => duplicateStep(index)}
+                    />
+                  </React.Fragment>
+                );
+              } else {
+                return (
+                  <React.Fragment key={step.id}>
+                    {/* Connector Line */}
+                    {index > 0 && (
+                      <div className="flex justify-center -my-2">
+                        <div className="w-px h-4 bg-slate-300" />
+                      </div>
+                    )}
+
+                    {/* Standard Step Card */}
+                    <StepCard
+                      step={step}
+                      index={index}
+                      onChange={(updatedStep) => updateStep(index, updatedStep)}
+                      onDelete={() => deleteStep(index)}
+                      onDuplicate={() => duplicateStep(index)}
+                      variables={getContextVariables(index)}
+                      depth={0}
+                      draggable={!readOnly}
+                      onDragStart={() => handleDragStart(index)}
+                      onDragOver={(e) => handleDragOver(e, index)}
+                      onDragEnd={handleDragEnd}
+                    />
+                  </React.Fragment>
+                );
+              }
+            })}
           </div>
 
           {/* Add Step Button */}

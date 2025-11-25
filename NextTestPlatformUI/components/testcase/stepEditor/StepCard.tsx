@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { TestStep, LoopConfig, BranchConfig } from '../../../types';
+import { TestStep, BranchConfig } from '../../../types';
 import {
-  RefreshCw,
   GitBranch,
   ChevronDown,
   ChevronUp,
@@ -16,7 +15,6 @@ import {
   Package,
   Settings
 } from 'lucide-react';
-import { LoopConfigEditor } from './LoopConfigEditor';
 import { BranchConfigEditor } from './BranchConfigEditor';
 import { ChildStepList } from './ChildStepList';
 import { ActionTemplateSelector } from './ActionTemplateSelector';
@@ -88,7 +86,6 @@ export const StepCard: React.FC<StepCardProps> = ({
   const marginLeft = depth * 24;
 
   // Check if step has control flow
-  const hasLoop = !!step.loop;
   const hasBranches = step.branches && step.branches.length > 0;
   const hasChildren = step.children && step.children.length > 0;
 
@@ -151,27 +148,7 @@ export const StepCard: React.FC<StepCardProps> = ({
     });
   };
 
-  // Handle loop config change
-  const handleLoopChange = (loopConfig: LoopConfig | undefined) => {
-    const updatedStep = { ...step };
-    if (loopConfig) {
-      updatedStep.loop = loopConfig;
-      // Initialize children array if enabling loop
-      if (!updatedStep.children) {
-        updatedStep.children = [];
-      }
-    } else {
-      delete updatedStep.loop;
-    }
-    onChange(updatedStep);
-  };
-
-  // Handle branches change
-  const handleBranchesChange = (branches: BranchConfig[]) => {
-    onChange({ ...step, branches });
-  };
-
-  // Handle children change (for loop body)
+  // Handle children change
   const handleChildrenChange = (children: TestStep[]) => {
     onChange({ ...step, children });
   };
@@ -227,7 +204,7 @@ export const StepCard: React.FC<StepCardProps> = ({
           {/* Step Type Indicator */}
           <div
             className={`w-12 flex flex-col items-center justify-center border-r border-slate-100 ${
-              hasLoop ? 'bg-blue-50' : hasBranches ? 'bg-purple-50' : 'bg-slate-50'
+              hasBranches ? 'bg-purple-50' : 'bg-slate-50'
             }`}
           >
             <div className={`p-1.5 rounded ${typeColor}`}>{typeIcon}</div>
@@ -285,14 +262,6 @@ export const StepCard: React.FC<StepCardProps> = ({
                     {stepType}
                   </span>
 
-                  {/* Loop Indicator */}
-                  {hasLoop && (
-                    <span className="flex items-center space-x-1 text-[10px] px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-medium">
-                      <RefreshCw size={10} />
-                      <span>Loop: {step.loop?.type}</span>
-                    </span>
-                  )}
-
                   {/* Branch Indicator */}
                   {hasBranches && (
                     <span className="flex items-center space-x-1 text-[10px] px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">
@@ -302,7 +271,7 @@ export const StepCard: React.FC<StepCardProps> = ({
                   )}
 
                   {/* Children Indicator */}
-                  {hasChildren && !hasLoop && (
+                  {hasChildren && (
                     <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full font-medium">
                       {step.children?.length} child steps
                     </span>
@@ -431,32 +400,11 @@ export const StepCard: React.FC<StepCardProps> = ({
 
             {/* Common Configuration (always visible) */}
             <div className="space-y-3">
-              {/* Loop Configuration */}
-              <LoopConfigEditor
-                config={step.loop}
-                onChange={handleLoopChange}
-                variables={variables}
-              />
-
-              {/* Loop Body (if loop enabled) */}
-              {hasLoop && (
-                <div className="mt-3">
-                  <ChildStepList
-                    children={step.children || []}
-                    onChange={handleChildrenChange}
-                    variables={variables}
-                    containerLabel="Loop Body (executed each iteration)"
-                    depth={depth + 1}
-                    renderStepCard={renderChildStepCard}
-                  />
-                </div>
-              )}
-
               {/* Branch Configuration */}
               {(hasBranches || step.type === 'branch') && (
                 <BranchConfigEditor
                   branches={step.branches || []}
-                  onChange={handleBranchesChange}
+                  onChange={(branches) => onChange({ ...step, branches })}
                   variables={variables}
                   renderChildSteps={(children, onChange, label) => (
                     <ChildStepList
@@ -469,18 +417,6 @@ export const StepCard: React.FC<StepCardProps> = ({
                     />
                   )}
                 />
-              )}
-
-              {/* Add Branch Button (if not already has branches and not branch type) */}
-              {!hasBranches && step.type !== 'branch' && (
-                <button
-                  type="button"
-                  onClick={() => handleBranchesChange([{ condition: '', label: 'Branch 1', children: [] }])}
-                  className="w-full flex items-center justify-center space-x-2 px-3 py-2 text-xs font-medium text-purple-600 bg-purple-50 hover:bg-purple-100 border border-dashed border-purple-300 rounded-lg transition-colors"
-                >
-                  <GitBranch size={14} />
-                  <span>Add Conditional Branches</span>
-                </button>
               )}
             </div>
           </div>
