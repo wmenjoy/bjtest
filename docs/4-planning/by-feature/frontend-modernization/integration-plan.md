@@ -516,10 +516,10 @@ WebSocket: ws://localhost:8090/api
 
 ### 相关文档
 
-- [API 文档](../../1-specs/api/v2-documentation.md)
-- [数据库设计](../../1-specs/database/schema.md)
+- [API 文档](./API_DOCUMENTATION.md)
+- [数据库设计](./DATABASE_DESIGN.md)
 - [WebSocket 架构](../WEBSOCKET_ARCHITECTURE.md)
-- [项目状态](../../4-planning/active/status-2025-11-23.md)
+- [项目状态](./PROJECT_STATUS_2025-11-23.md)
 
 ---
 
