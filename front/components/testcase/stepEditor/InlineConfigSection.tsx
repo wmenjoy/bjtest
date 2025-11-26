@@ -39,15 +39,18 @@ export const InlineConfigSection: React.FC<InlineConfigSectionProps> = ({
           </div>
           <div>
             <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
-              Condition (optional)
+              Execution Condition (Optional)
             </label>
             <input
               type="text"
               className="w-full px-3 py-2 text-sm font-mono border border-slate-200 rounded-lg bg-white focus:border-blue-400 outline-none"
-              placeholder="{{status}} == 200"
+              placeholder="{{previousStep.status}} == 'success'"
               value={step.condition || ''}
               onChange={(e) => updateField('condition', e.target.value)}
             />
+            <p className="text-[10px] text-slate-500 mt-1">
+              Controls whether this step runs. For result validation, use Assertions instead.
+            </p>
           </div>
         </div>
       </div>
@@ -86,6 +89,66 @@ export const InlineConfigSection: React.FC<InlineConfigSectionProps> = ({
                   updateField('config', { ...step.config, url: e.target.value })
                 }
               />
+            </div>
+          </div>
+
+          {/* Headers Section */}
+          <div>
+            <label className="block text-xs text-slate-600 mb-2">Headers</label>
+            <div className="space-y-2">
+              {Object.entries(step.config?.headers || {}).map(([key, value], idx) => (
+                <div key={idx} className="flex items-center space-x-2">
+                  <input
+                    type="text"
+                    className="flex-1 px-2 py-1.5 text-xs font-mono border border-slate-200 rounded bg-white focus:border-blue-400 outline-none"
+                    placeholder="Header-Name"
+                    value={key}
+                    onChange={(e) => {
+                      const newHeaders = { ...step.config?.headers };
+                      const oldValue = newHeaders[key];
+                      delete newHeaders[key];
+                      if (e.target.value) {
+                        newHeaders[e.target.value] = oldValue;
+                      }
+                      updateField('config', { ...step.config, headers: newHeaders });
+                    }}
+                  />
+                  <span className="text-slate-400">:</span>
+                  <input
+                    type="text"
+                    className="flex-1 px-2 py-1.5 text-xs font-mono border border-slate-200 rounded bg-white focus:border-blue-400 outline-none"
+                    placeholder="header-value or {{variable}}"
+                    value={value}
+                    onChange={(e) => {
+                      updateField('config', {
+                        ...step.config,
+                        headers: { ...step.config?.headers, [key]: e.target.value }
+                      });
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="p-1 text-slate-400 hover:text-red-500"
+                    onClick={() => {
+                      const newHeaders = { ...step.config?.headers };
+                      delete newHeaders[key];
+                      updateField('config', { ...step.config, headers: newHeaders });
+                    }}
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                className="text-xs text-blue-600 hover:underline"
+                onClick={() => {
+                  const newHeaders = { ...step.config?.headers, '': '' };
+                  updateField('config', { ...step.config, headers: newHeaders });
+                }}
+              >
+                + Add header
+              </button>
             </div>
           </div>
         </div>

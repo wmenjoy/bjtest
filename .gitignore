@@ -1,100 +1,101 @@
-# Backend (Go) - nextest-platform/
-nextest-platform/bin/
-nextest-platform/dist/
-nextest-platform/*.exe
-nextest-platform/*.dll
-nextest-platform/*.so
-nextest-platform/*.dylib
+# Backend (Go) - backend/
+backend/bin/
+backend/dist/
+backend/*.exe
+backend/*.dll
+backend/*.so
+backend/*.dylib
 
 # Go build cache
-nextest-platform/.cache/
-nextest-platform/vendor/
-
+backend/.cache/
+backend/vendor/
+**/test-service
+**/bin
 # Go test coverage
-nextest-platform/*.out
-nextest-platform/*.coverprofile
+backend/*.out
+backend/*.coverprofile
 
 # IDE - VS Code
-nextest-platform/.vscode/
+backend/.vscode/
 .vscode/
 
 # IDE - GoLand/IntelliJ
-nextest-platform/.idea/
-nextest-platform/*.iml
-nextest-platform/*.iws
-nextest-platform/*.ipr
+backend/.idea/
+backend/*.iml
+backend/*.iws
+backend/*.ipr
 
 # IDE - Sublime
-nextest-platform/*.sublime-project
-nextest-platform/*.sublime-workspace
+backend/*.sublime-project
+backend/*.sublime-workspace
 
 # OS
-nextest-platform/.DS_Store
+backend/.DS_Store
 .DS_Store
-nextest-platform/Thumbs.db
+backend/Thumbs.db
 
 # Database files
-nextest-platform/*.db
-nextest-platform/*.sqlite
-nextest-platform/*.sqlite3
-nextest-platform/data/
-nextest-platform/test-management.db
+backend/*.db
+backend/*.sqlite
+backend/*.sqlite3
+backend/data/
+backend/test-management.db
 
 # Logs
-nextest-platform/*.log
-nextest-platform/logs/
+backend/*.log
+backend/logs/
 
 # Temporary files
-nextest-platform/tmp/
-nextest-platform/*.tmp
-nextest-platform/temp/
+backend/tmp/
+backend/*.tmp
+backend/temp/
 
 # Build artifacts
-nextest-platform/server
-nextest-platform/import-tool
-nextest-platform/test-service
-nextest-platform/test-service-old
+backend/server
+backend/import-tool
+backend/test-service
+backend/test-service-old
 
 # Configuration - local overrides
-nextest-platform/config.local.toml
-nextest-platform/.env.local
+backend/config.local.toml
+backend/.env.local
 
 # Test results
-nextest-platform/test-results/
-nextest-platform/*.test
+backend/test-results/
+backend/*.test
 
-# Frontend (React) - NextTestPlatformUI/
-NextTestPlatformUI/node_modules/
-NextTestPlatformUI/dist/
-NextTestPlatformUI/build/
-NextTestPlatformUI/.vite/
+# Frontend (React) - front/
+front/node_modules/
+front/dist/
+front/build/
+front/.vite/
 
 # Frontend - npm/pnpm
-NextTestPlatformUI/package-lock.json
-NextTestPlatformUI/npm-debug.log*
-NextTestPlatformUI/yarn-error.log*
-NextTestPlatformUI/pnpm-debug.log*
+front/package-lock.json
+front/npm-debug.log*
+front/yarn-error.log*
+front/pnpm-debug.log*
 
 # Frontend - IDE
-NextTestPlatformUI/.vscode/
-NextTestPlatformUI/.idea/
-NextTestPlatformUI/*.iml
+front/.vscode/
+front/.idea/
+front/*.iml
 
 # Frontend - OS
-NextTestPlatformUI/.DS_Store
-NextTestPlatformUI/Thumbs.db
+front/.DS_Store
+front/Thumbs.db
 
 # Frontend - Environment
-NextTestPlatformUI/.env.local
-NextTestPlatformUI/.env.*.local
+front/.env.local
+front/.env.*.local
 
 # Frontend - Build output
-NextTestPlatformUI/dist/
-NextTestPlatformUI/build/
+front/dist/
+front/build/
 
 # Frontend - Testing
-NextTestPlatformUI/coverage/
-NextTestPlatformUI/.nyc_output/
+front/coverage/
+front/.nyc_output/
 
 # Root level
 .DS_Store

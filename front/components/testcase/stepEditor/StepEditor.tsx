@@ -3,6 +3,8 @@ import { TestStep } from '../../../types';
 import { StepCard } from './StepCard';
 import { LoopStepCard } from './LoopStepCard';
 import { BranchStepCard } from './BranchStepCard';
+import { ActionTemplateSelector } from './ActionTemplateSelector';
+import { ActionTemplate } from '../../../services/api/actionTemplateApi';
 import {
   Plus,
   ChevronDown,
@@ -13,7 +15,9 @@ import {
   CheckCircle,
   GitBranch,
   Layers,
-  RefreshCw
+  RefreshCw,
+  Package,
+  Code
 } from 'lucide-react';
 
 interface StepEditorProps {
@@ -21,6 +25,7 @@ interface StepEditorProps {
   onChange: (steps: TestStep[]) => void;
   variables?: Record<string, any>;
   readOnly?: boolean;
+  projectId?: string; // Required for Action Library integration
 }
 
 // Step type definitions for the add step dropdown
@@ -37,9 +42,11 @@ export const StepEditor: React.FC<StepEditorProps> = ({
   steps,
   onChange,
   variables = {},
-  readOnly = false
+  readOnly = false,
+  projectId
 }) => {
   const [showAddMenu, setShowAddMenu] = useState(false);
+  const [showActionLibrary, setShowActionLibrary] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   // Generate unique step ID
@@ -67,6 +74,23 @@ export const StepEditor: React.FC<StepEditorProps> = ({
     };
     onChange([...steps, newStep]);
     setShowAddMenu(false);
+  }, [steps, onChange, generateStepId]);
+
+  // Add step from Action Library
+  const handleActionTemplateSelect = useCallback((template: ActionTemplate) => {
+    const newStep: TestStep = {
+      id: generateStepId(),
+      name: template.name,
+      summary: template.description,
+      type: template.type as any, // Map action type to step type
+      actionTemplateId: template.templateId,
+      actionVersion: '1.0', // Default version
+      inputs: {}, // Will be configured by user
+      outputs: {}, // Will be configured by user
+      config: undefined // Using template reference, not inline config
+    };
+    onChange([...steps, newStep]);
+    setShowActionLibrary(false);
   }, [steps, onChange, generateStepId]);
 
   // Update step at index
@@ -173,15 +197,15 @@ export const StepEditor: React.FC<StepEditorProps> = ({
                 No steps defined
               </h3>
               <p className="text-xs text-slate-400 mb-4">
-                Add steps to define your test execution flow
+                Add your first step to get started
               </p>
               {!readOnly && (
                 <button
-                  onClick={() => addStep('http')}
-                  className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+                  onClick={() => setShowAddMenu(true)}
+                  className="inline-flex items-center space-x-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-all shadow-sm hover:shadow"
                 >
-                  <Plus size={16} />
-                  <span>Add First Step</span>
+                  <Plus size={18} />
+                  <span>Add Step</span>
                 </button>
               )}
             </div>
@@ -269,53 +293,76 @@ export const StepEditor: React.FC<StepEditorProps> = ({
                 <div className="w-px h-6 bg-slate-300" />
               </div>
 
-              {/* Add Button with Dropdown */}
-              <div className="relative flex justify-center">
-                <button
-                  onClick={() => setShowAddMenu(!showAddMenu)}
-                  className="flex items-center space-x-2 px-6 py-3 bg-white hover:bg-slate-50 border border-dashed border-slate-300 hover:border-blue-400 rounded-xl text-slate-500 hover:text-blue-600 shadow-sm hover:shadow transition-all"
-                >
-                  <Plus size={18} />
-                  <span className="font-medium">Add Step</span>
-                  <ChevronDown size={14} className={`transition-transform ${showAddMenu ? 'rotate-180' : ''}`} />
-                </button>
+              {/* Single Add Button with Menu */}
+              <div className="flex justify-center">
+                <div className="relative">
+                  <button
+                    onClick={() => setShowAddMenu(!showAddMenu)}
+                    className="flex items-center space-x-2 px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-medium shadow-md hover:shadow-lg transition-all transform hover:scale-105"
+                  >
+                    <Plus size={20} />
+                    <span>Add Step</span>
+                  </button>
 
-                {/* Dropdown Menu */}
-                {showAddMenu && (
-                  <>
-                    {/* Backdrop */}
-                    <div
-                      className="fixed inset-0 z-10"
-                      onClick={() => setShowAddMenu(false)}
-                    />
+                  {/* Dropdown Menu */}
+                  {showAddMenu && (
+                    <>
+                      {/* Backdrop */}
+                      <div
+                        className="fixed inset-0 z-10"
+                        onClick={() => setShowAddMenu(false)}
+                      />
 
-                    {/* Menu */}
-                    <div className="absolute z-20 top-full mt-2 w-56 bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden">
-                      <div className="p-2">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase px-2 py-1">
-                          Select Step Type
-                        </p>
-                        {STEP_TYPES.map((stepType) => {
-                          const Icon = stepType.icon;
-                          return (
+                      {/* Menu */}
+                      <div className="absolute z-20 top-full mt-3 left-1/2 -translate-x-1/2 w-72 bg-white rounded-xl border border-slate-200 shadow-2xl overflow-hidden">
+                        {/* Action Library Option */}
+                        {projectId && (
+                          <>
                             <button
-                              key={stepType.type}
-                              onClick={() => addStep(stepType.type)}
-                              className="w-full flex items-center space-x-3 px-3 py-2 hover:bg-slate-50 rounded-lg transition-colors"
+                              onClick={() => {
+                                setShowActionLibrary(true);
+                                setShowAddMenu(false);
+                              }}
+                              className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-blue-50 transition-colors border-b border-slate-100"
                             >
-                              <div className={`p-1.5 rounded bg-${stepType.color}-100 text-${stepType.color}-600`}>
-                                <Icon size={14} />
+                              <div className="p-2 rounded-lg bg-blue-100 text-blue-600">
+                                <Package size={18} />
                               </div>
-                              <span className="text-sm font-medium text-slate-700">
-                                {stepType.label}
-                              </span>
+                              <div className="flex-1 text-left">
+                                <div className="text-sm font-semibold text-slate-800">From Action Library</div>
+                                <div className="text-xs text-slate-500">Use pre-built templates</div>
+                              </div>
                             </button>
-                          );
-                        })}
+                          </>
+                        )}
+
+                        {/* Custom Step Types */}
+                        <div className="p-2">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase px-2 py-2">
+                            Create Custom Step
+                          </p>
+                          {STEP_TYPES.map((stepType) => {
+                            const Icon = stepType.icon;
+                            return (
+                              <button
+                                key={stepType.type}
+                                onClick={() => addStep(stepType.type)}
+                                className="w-full flex items-center space-x-3 px-3 py-2.5 hover:bg-slate-50 rounded-lg transition-colors"
+                              >
+                                <div className={`p-1.5 rounded bg-${stepType.color}-100 text-${stepType.color}-600`}>
+                                  <Icon size={16} />
+                                </div>
+                                <span className="text-sm font-medium text-slate-700">
+                                  {stepType.label}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  </>
-                )}
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -355,6 +402,15 @@ export const StepEditor: React.FC<StepEditorProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Action Library Modal */}
+      {showActionLibrary && projectId && (
+        <ActionTemplateSelector
+          projectId={projectId}
+          onSelect={handleActionTemplateSelect}
+          onClose={() => setShowActionLibrary(false)}
+        />
       )}
     </div>
   );
