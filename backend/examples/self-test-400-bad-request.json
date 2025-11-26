@@ -1,0 +1,310 @@
+{
+  "workflowId": "self-test-400-bad-request",
+  "name": "400 Bad Request Error Tests",
+  "version": "1.0.0",
+  "description": "System tests for 400 Bad Request responses - verifies parameter validation (按照HTTP规范，参数错误必须返回400)",
+  "definition": {
+    "variables": {
+      "baseUrl": "http://localhost:8090/api"
+    },
+    "steps": {
+      "step01_createGroupMissingId": {
+        "id": "step01_createGroupMissingId",
+        "name": "Create Group - Missing groupId",
+        "type": "http",
+        "config": {
+          "method": "POST",
+          "url": "{{baseUrl}}/groups",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "Test Group without ID"
+          }
+        }
+      },
+      "step02_assert400GroupId": {
+        "id": "step02_assert400GroupId",
+        "name": "Assert 400 for Missing groupId",
+        "type": "assert",
+        "dependsOn": [
+          "step01_createGroupMissingId"
+        ],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step01_createGroupMissingId.response.statusCode}}",
+              "expected": 400,
+              "message": "POST /api/groups without groupId must return 400"
+            }
+          ]
+        },
+        "onError": "continue"
+      },
+      "step03_createGroupMissingName": {
+        "id": "step03_createGroupMissingName",
+        "name": "Create Group - Missing name",
+        "type": "http",
+        "dependsOn": [
+          "step02_assert400GroupId"
+        ],
+        "config": {
+          "method": "POST",
+          "url": "{{baseUrl}}/groups",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "groupId": "test-group-no-name"
+          }
+        }
+      },
+      "step04_assert400GroupName": {
+        "id": "step04_assert400GroupName",
+        "name": "Assert 400 for Missing name",
+        "type": "assert",
+        "dependsOn": [
+          "step03_createGroupMissingName"
+        ],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step03_createGroupMissingName.response.statusCode}}",
+              "expected": 400,
+              "message": "POST /api/groups without name must return 400"
+            }
+          ]
+        },
+        "onError": "continue"
+      },
+      "step05_createTestMissingId": {
+        "id": "step05_createTestMissingId",
+        "name": "Create Test - Missing testId",
+        "type": "http",
+        "dependsOn": [
+          "step04_assert400GroupName"
+        ],
+        "config": {
+          "method": "POST",
+          "url": "{{baseUrl}}/tests",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "Test without ID",
+            "type": "http"
+          }
+        }
+      },
+      "step06_assert400TestId": {
+        "id": "step06_assert400TestId",
+        "name": "Assert 400 for Missing testId",
+        "type": "assert",
+        "dependsOn": [
+          "step05_createTestMissingId"
+        ],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step05_createTestMissingId.response.statusCode}}",
+              "expected": 400,
+              "message": "POST /api/tests without testId must return 400"
+            }
+          ]
+        },
+        "onError": "continue"
+      },
+      "step07_createTestMissingType": {
+        "id": "step07_createTestMissingType",
+        "name": "Create Test - Missing type",
+        "type": "http",
+        "dependsOn": [
+          "step06_assert400TestId"
+        ],
+        "config": {
+          "method": "POST",
+          "url": "{{baseUrl}}/tests",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "testId": "test-no-type",
+            "name": "Test without type"
+          }
+        }
+      },
+      "step08_assert400TestType": {
+        "id": "step08_assert400TestType",
+        "name": "Assert 400 for Missing type",
+        "type": "assert",
+        "dependsOn": [
+          "step07_createTestMissingType"
+        ],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step07_createTestMissingType.response.statusCode}}",
+              "expected": 400,
+              "message": "POST /api/tests without type must return 400"
+            }
+          ]
+        },
+        "onError": "continue"
+      },
+      "step09_createEnvMissingId": {
+        "id": "step09_createEnvMissingId",
+        "name": "Create Environment - Missing envId",
+        "type": "http",
+        "dependsOn": [
+          "step08_assert400TestType"
+        ],
+        "config": {
+          "method": "POST",
+          "url": "{{baseUrl}}/environments",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "Env without ID"
+          }
+        }
+      },
+      "step10_assert400EnvId": {
+        "id": "step10_assert400EnvId",
+        "name": "Assert 400 for Missing envId",
+        "type": "assert",
+        "dependsOn": [
+          "step09_createEnvMissingId"
+        ],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step09_createEnvMissingId.response.statusCode}}",
+              "expected": 400,
+              "message": "POST /api/environments without envId must return 400"
+            }
+          ]
+        },
+        "onError": "continue"
+      },
+      "step11_createWorkflowMissingId": {
+        "id": "step11_createWorkflowMissingId",
+        "name": "Create Workflow - Missing workflowId",
+        "type": "http",
+        "dependsOn": [
+          "step10_assert400EnvId"
+        ],
+        "config": {
+          "method": "POST",
+          "url": "{{baseUrl}}/workflows",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "Workflow without ID",
+            "definition": {
+              "steps": {}
+            }
+          }
+        }
+      },
+      "step12_assert400WorkflowId": {
+        "id": "step12_assert400WorkflowId",
+        "name": "Assert 400 for Missing workflowId",
+        "type": "assert",
+        "dependsOn": [
+          "step11_createWorkflowMissingId"
+        ],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step11_createWorkflowMissingId.response.statusCode}}",
+              "expected": 400,
+              "message": "POST /api/workflows without workflowId must return 400"
+            }
+          ]
+        },
+        "onError": "continue"
+      },
+      "step13_createWorkflowInvalidDefinition": {
+        "id": "step13_createWorkflowInvalidDefinition",
+        "name": "Create Workflow - Invalid definition",
+        "type": "http",
+        "dependsOn": [
+          "step12_assert400WorkflowId"
+        ],
+        "config": {
+          "method": "POST",
+          "url": "{{baseUrl}}/workflows",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "workflowId": "invalid-workflow",
+            "name": "Invalid Workflow"
+          }
+        }
+      },
+      "step14_assert400WorkflowDef": {
+        "id": "step14_assert400WorkflowDef",
+        "name": "Assert 400 for Invalid definition",
+        "type": "assert",
+        "dependsOn": [
+          "step13_createWorkflowInvalidDefinition"
+        ],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step13_createWorkflowInvalidDefinition.response.statusCode}}",
+              "expected": 400,
+              "message": "POST /api/workflows without definition must return 400"
+            }
+          ]
+        },
+        "onError": "continue"
+      },
+      "step15_createGroupInvalidJson": {
+        "id": "step15_createGroupInvalidJson",
+        "name": "Create Group - Invalid JSON (empty body)",
+        "type": "http",
+        "dependsOn": [
+          "step14_assert400WorkflowDef"
+        ],
+        "config": {
+          "method": "POST",
+          "url": "{{baseUrl}}/groups",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {}
+        }
+      },
+      "step16_assert400InvalidJson": {
+        "id": "step16_assert400InvalidJson",
+        "name": "Assert 400 for Invalid JSON",
+        "type": "assert",
+        "dependsOn": [
+          "step15_createGroupInvalidJson"
+        ],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step15_createGroupInvalidJson.response.statusCode}}",
+              "expected": 400,
+              "message": "POST /api/groups with empty body must return 400"
+            }
+          ]
+        },
+        "onError": "continue"
+      }
+    }
+  }
+}

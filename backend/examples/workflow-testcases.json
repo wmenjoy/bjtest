@@ -1,0 +1,168 @@
+{
+  "groups": [
+    {
+      "groupId": "api-self-tests",
+      "name": "API Self Tests",
+      "description": "Automated API self-test suite",
+      "projectId": "default"
+    },
+    {
+      "groupId": "error-handling-tests",
+      "name": "Error Handling Tests",
+      "description": "HTTP error code validation tests",
+      "projectId": "default"
+    },
+    {
+      "groupId": "platform-tests",
+      "name": "Platform Tests",
+      "description": "Core platform functionality tests",
+      "projectId": "default"
+    }
+  ],
+  "testCases": [
+    {
+      "testId": "tc-testcase-api",
+      "name": "TestCase API Complete Test",
+      "type": "workflow",
+      "groupId": "api-self-tests",
+      "projectId": "default",
+      "priority": "P1",
+      "status": "active",
+      "objective": "Complete CRUD test for TestCase API endpoints",
+      "workflowId": "self-test-testcase-complete",
+      "tags": ["api", "self-test", "crud"]
+    },
+    {
+      "testId": "tc-testgroup-api",
+      "name": "TestGroup API Complete Test",
+      "type": "workflow",
+      "groupId": "api-self-tests",
+      "projectId": "default",
+      "priority": "P1",
+      "status": "active",
+      "objective": "Complete CRUD test for TestGroup API endpoints",
+      "workflowId": "self-test-testgroup-complete",
+      "tags": ["api", "self-test", "crud"]
+    },
+    {
+      "testId": "tc-environment-api",
+      "name": "Environment API Complete Test",
+      "type": "workflow",
+      "groupId": "api-self-tests",
+      "projectId": "default",
+      "priority": "P1",
+      "status": "active",
+      "objective": "Complete test for Environment API including variables",
+      "workflowId": "self-test-environment-api-v2",
+      "tags": ["api", "self-test", "environment"]
+    },
+    {
+      "testId": "tc-workflow-execution-api",
+      "name": "Workflow Execution API Test",
+      "type": "workflow",
+      "groupId": "api-self-tests",
+      "projectId": "default",
+      "priority": "P1",
+      "status": "active",
+      "objective": "Test workflow execution and result retrieval APIs",
+      "workflowId": "self-test-workflow-execution-api",
+      "tags": ["api", "self-test", "workflow"]
+    },
+    {
+      "testId": "tc-results-api",
+      "name": "Test Results API Test",
+      "type": "workflow",
+      "groupId": "api-self-tests",
+      "projectId": "default",
+      "priority": "P2",
+      "status": "active",
+      "objective": "Test results storage and retrieval APIs",
+      "workflowId": "self-test-results-api",
+      "tags": ["api", "self-test", "results"]
+    },
+    {
+      "testId": "tc-error-handling",
+      "name": "Error Handling Tests",
+      "type": "workflow",
+      "groupId": "error-handling-tests",
+      "projectId": "default",
+      "priority": "P2",
+      "status": "active",
+      "objective": "Validate proper error responses for various scenarios",
+      "workflowId": "self-test-error-handling",
+      "tags": ["error", "self-test"]
+    },
+    {
+      "testId": "tc-404-not-found",
+      "name": "404 Not Found Tests",
+      "type": "workflow",
+      "groupId": "error-handling-tests",
+      "projectId": "default",
+      "priority": "P2",
+      "status": "active",
+      "objective": "Validate 404 responses for non-existent resources",
+      "workflowId": "self-test-404-not-found",
+      "tags": ["error", "404", "self-test"]
+    },
+    {
+      "testId": "tc-400-bad-request",
+      "name": "400 Bad Request Tests",
+      "type": "workflow",
+      "groupId": "error-handling-tests",
+      "projectId": "default",
+      "priority": "P2",
+      "status": "active",
+      "objective": "Validate 400 responses for invalid requests",
+      "workflowId": "self-test-400-bad-request",
+      "tags": ["error", "400", "self-test"]
+    },
+    {
+      "testId": "tc-409-conflict",
+      "name": "409 Conflict Tests",
+      "type": "workflow",
+      "groupId": "error-handling-tests",
+      "projectId": "default",
+      "priority": "P2",
+      "status": "active",
+      "objective": "Validate 409 responses for conflict scenarios",
+      "workflowId": "self-test-409-conflict",
+      "tags": ["error", "409", "self-test"]
+    },
+    {
+      "testId": "tc-platform-self-test",
+      "name": "Platform Self Test",
+      "type": "workflow",
+      "groupId": "platform-tests",
+      "projectId": "default",
+      "priority": "P0",
+      "status": "active",
+      "objective": "Core platform health and functionality test",
+      "workflowId": "platform-self-test-v1",
+      "tags": ["platform", "health", "critical"]
+    },
+    {
+      "testId": "tc-action-feature",
+      "name": "Action Feature Test",
+      "type": "workflow",
+      "groupId": "platform-tests",
+      "projectId": "default",
+      "priority": "P1",
+      "status": "active",
+      "objective": "Test action/script execution features",
+      "workflowId": "action-feature-test-v1",
+      "tags": ["action", "script", "feature"]
+    },
+    {
+      "testId": "tc-basic-workflow",
+      "name": "Basic Workflow Test",
+      "type": "workflow",
+      "groupId": "platform-tests",
+      "projectId": "default",
+      "priority": "P1",
+      "status": "active",
+      "objective": "Basic workflow execution validation",
+      "workflowId": "self-test-workflow",
+      "tags": ["workflow", "basic"]
+    }
+  ]
+}

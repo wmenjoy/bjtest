@@ -1,0 +1,251 @@
+{
+  "workflowId": "self-test-testcase-v6",
+  "name": "TestCase API Complete Test v2",
+  "version": "1.0.0",
+  "description": "Complete TestCase API test with corrected assertions",
+  "definition": {
+    "name": "TestCase API Complete Test v2",
+    "version": "1.0.0",
+    "description": "Tests all TestCase API endpoints",
+    "variables": {
+      "baseUrl": "http://localhost:8090/api",
+      "dbPath": "./data/test_management.db",
+      "tenantId": "default",
+      "projectId": "default",
+      "envId": "testcase-test-env-v2",
+      "groupId": "testcase-test-group-v2",
+      "httpTestId": "test-http-case-v2",
+      "cmdTestId": "test-cmd-case-v2"
+    },
+    "steps": {
+      "step01_setupEnv": {
+        "id": "step01_setupEnv",
+        "name": "Setup & Activate Environment",
+        "type": "script",
+        "config": {
+          "language": "shell",
+          "script": "echo 'Environment setup simulated'; exit 0"
+        }
+      },
+      "step02_cleanup": {
+        "id": "step02_cleanup",
+        "name": "Cleanup Old Data",
+        "type": "database",
+        "dependsOn": [
+          "step01_setupEnv"
+        ],
+        "onError": "continue",
+        "config": {
+          "driver": "sqlite3",
+          "dsn": "{{dbPath}}",
+          "queryType": "exec",
+          "query": "DELETE FROM test_cases WHERE test_id LIKE 'test-%case-v2'",
+          "args": []
+        }
+      },
+      "step03_createGroup": {
+        "id": "step03_createGroup",
+        "name": "Create Test Group",
+        "type": "http",
+        "dependsOn": [
+          "step02_cleanup"
+        ],
+        "config": {
+          "method": "POST",
+          "url": "{{baseUrl}}/groups",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "groupId": "{{groupId}}",
+            "tenantId": "{{tenantId}}",
+            "projectId": "{{projectId}}",
+            "name": "TestCase Test Group v2"
+          }
+        }
+      },
+      "step04_createHttpTest": {
+        "id": "step04_createHttpTest",
+        "name": "Create HTTP Test",
+        "type": "http",
+        "dependsOn": [
+          "step03_createGroup"
+        ],
+        "config": {
+          "method": "POST",
+          "url": "{{baseUrl}}/tests",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "testId": "{{httpTestId}}",
+            "tenantId": "{{tenantId}}",
+            "projectId": "{{projectId}}",
+            "name": "HTTP Test v2",
+            "groupId": "{{groupId}}",
+            "type": "http",
+            "http": {
+              "method": "GET",
+              "url": "{{baseUrl}}/groups"
+            }
+          }
+        }
+      },
+      "step05_verifyDB": {
+        "id": "step05_verifyDB",
+        "name": "Verify in Database",
+        "type": "database",
+        "dependsOn": [
+          "step04_createHttpTest"
+        ],
+        "config": {
+          "driver": "sqlite3",
+          "dsn": "{{dbPath}}",
+          "queryType": "select",
+          "query": "SELECT * FROM test_cases WHERE test_id = ?",
+          "args": [
+            "{{httpTestId}}"
+          ]
+        }
+      },
+      "step06_assertCreated": {
+        "id": "step06_assertCreated",
+        "name": "Assert Test Created",
+        "type": "assert",
+        "dependsOn": [
+          "step05_verifyDB"
+        ],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step04_createHttpTest.response.statusCode}}",
+              "expected": 201,
+              "message": "HTTP response should be 200"
+            },
+            {
+              "type": "equals",
+              "actual": "{{step05_verifyDB.success}}",
+              "expected": true,
+              "message": "DB query should succeed"
+            }
+          ]
+        }
+      },
+      "step07_getTest": {
+        "id": "step07_getTest",
+        "name": "Get Test by ID",
+        "type": "http",
+        "dependsOn": [
+          "step06_assertCreated"
+        ],
+        "config": {
+          "method": "GET",
+          "url": "{{baseUrl}}/tests/{{httpTestId}}"
+        }
+      },
+      "step08_listTests": {
+        "id": "step08_listTests",
+        "name": "List Tests",
+        "type": "http",
+        "dependsOn": [
+          "step07_getTest"
+        ],
+        "config": {
+          "method": "GET",
+          "url": "{{baseUrl}}/tests"
+        }
+      },
+      "step09_searchTests": {
+        "id": "step09_searchTests",
+        "name": "Search Tests",
+        "type": "http",
+        "dependsOn": [
+          "step08_listTests"
+        ],
+        "config": {
+          "method": "GET",
+          "url": "{{baseUrl}}/tests/search?q=HTTP"
+        }
+      },
+      "step10_updateTest": {
+        "id": "step10_updateTest",
+        "name": "Update Test",
+        "type": "http",
+        "dependsOn": [
+          "step09_searchTests"
+        ],
+        "config": {
+          "method": "PUT",
+          "url": "{{baseUrl}}/tests/{{httpTestId}}",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "Updated HTTP Test v2"
+          }
+        }
+      },
+      "step11_deleteTest": {
+        "id": "step11_deleteTest",
+        "name": "Delete Test",
+        "type": "http",
+        "dependsOn": [
+          "step10_updateTest"
+        ],
+        "config": {
+          "method": "DELETE",
+          "url": "{{baseUrl}}/tests/{{httpTestId}}"
+        }
+      },
+      "step12_assertAllSuccess": {
+        "id": "step12_assertAllSuccess",
+        "name": "Assert All Operations Success",
+        "type": "assert",
+        "dependsOn": [
+          "step11_deleteTest"
+        ],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step07_getTest.response.statusCode}}",
+              "expected": 200,
+              "message": "Get should return 200"
+            },
+            {
+              "type": "equals",
+              "actual": "{{step10_updateTest.response.statusCode}}",
+              "expected": 200,
+              "message": "Update should return 200"
+            },
+            {
+              "type": "equals",
+              "actual": "{{step11_deleteTest.response.statusCode}}",
+              "expected": 200,
+              "message": "Delete should return 200"
+            }
+          ]
+        }
+      },
+      "step13_finalCleanup": {
+        "id": "step13_finalCleanup",
+        "name": "Final Cleanup",
+        "type": "database",
+        "dependsOn": [
+          "step12_assertAllSuccess"
+        ],
+        "onError": "continue",
+        "config": {
+          "driver": "sqlite3",
+          "dsn": "{{dbPath}}",
+          "queryType": "exec",
+          "query": "DELETE FROM test_cases WHERE test_id LIKE 'test-%case-v2'; DELETE FROM test_groups WHERE group_id = ?",
+          "args": [
+            "{{groupId}}"
+          ]
+        }
+      }
+    }
+  }
+}

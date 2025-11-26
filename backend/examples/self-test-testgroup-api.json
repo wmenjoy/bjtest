@@ -1,0 +1,302 @@
+{
+  "workflowId": "self-test-testgroup-v2",
+  "name": "TestGroup API Complete Test",
+  "version": "1.0.0",
+  "description": "Complete TestGroup API test with environment setup",
+  "definition": {
+    "name": "TestGroup API Complete Test",
+    "version": "1.0.0",
+    "description": "Tests all TestGroup API endpoints with environment setup",
+    "variables": {
+      "baseUrl": "http://localhost:8090/api",
+      "dbPath": "./data/test_management.db",
+      "tenantId": "default",
+      "projectId": "default",
+      "envId": "testgroup-test-env",
+      "parentGroupId": "test-parent-group",
+      "childGroupId": "test-child-group",
+      "timestamp": "{{$timestamp()}}"
+    },
+    "steps": {
+      "step01_setupEnv": {
+        "id": "step01_setupEnv",
+        "name": "Setup Test Environment",
+        "type": "http",
+        "onError": "continue",
+        "config": {
+          "method": "POST",
+          "url": "{{baseUrl}}/environments",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "envId": "{{envId}}",
+            "name": "TestGroup Test Environment",
+            "description": "Environment for TestGroup API tests",
+            "isActive": false
+          }
+        }
+      },
+      "step02_activateEnv": {
+        "id": "step02_activateEnv",
+        "name": "Activate Test Environment",
+        "type": "http",
+        "dependsOn": [
+          "step01_setupEnv"
+        ],
+        "config": {
+          "method": "POST",
+          "url": "{{baseUrl}}/environments/{{envId}}/activate",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "step03_cleanupOldData": {
+        "id": "step03_cleanupOldData",
+        "name": "Cleanup Old Test Data",
+        "type": "database",
+        "dependsOn": [
+          "step02_activateEnv"
+        ],
+        "onError": "continue",
+        "config": {
+          "driver": "sqlite3",
+          "dsn": "{{dbPath}}",
+          "queryType": "exec",
+          "query": "DELETE FROM test_groups WHERE group_id IN (?, ?)",
+          "args": [
+            "{{parentGroupId}}",
+            "{{childGroupId}}"
+          ]
+        }
+      },
+      "step04_createParentGroup": {
+        "id": "step04_createParentGroup",
+        "name": "Create Parent Test Group",
+        "type": "http",
+        "dependsOn": [
+          "step03_cleanupOldData"
+        ],
+        "config": {
+          "method": "POST",
+          "url": "{{baseUrl}}/groups",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "groupId": "{{parentGroupId}}",
+            "tenantId": "{{tenantId}}",
+            "projectId": "{{projectId}}",
+            "name": "Parent Test Group",
+            "description": "Parent group created at {{timestamp}}",
+            "parentId": null
+          }
+        }
+      },
+      "step05_verifyParentInDB": {
+        "id": "step05_verifyParentInDB",
+        "name": "Verify Parent Group in DB",
+        "type": "database",
+        "dependsOn": [
+          "step04_createParentGroup"
+        ],
+        "config": {
+          "driver": "sqlite3",
+          "dsn": "{{dbPath}}",
+          "queryType": "select",
+          "query": "SELECT * FROM test_groups WHERE group_id = ?",
+          "args": [
+            "{{parentGroupId}}"
+          ]
+        }
+      },
+      "step06_assertParentCreated": {
+        "id": "step06_assertParentCreated",
+        "name": "Assert Parent Group Created",
+        "type": "assert",
+        "dependsOn": [
+          "step05_verifyParentInDB"
+        ],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step04_createParentGroup.response.statusCode}}",
+              "expected": 201,
+              "message": "Parent group creation should return 200"
+            },
+            {
+              "type": "equals",
+              "actual": "{{step05_verifyParentInDB.success}}",
+              "expected": true,
+              "message": "DB query should succeed"
+            }
+          ]
+        }
+      },
+      "step07_createChildGroup": {
+        "id": "step07_createChildGroup",
+        "name": "Create Child Test Group",
+        "type": "http",
+        "dependsOn": [
+          "step06_assertParentCreated"
+        ],
+        "config": {
+          "method": "POST",
+          "url": "{{baseUrl}}/groups",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "groupId": "{{childGroupId}}",
+            "tenantId": "{{tenantId}}",
+            "projectId": "{{projectId}}",
+            "name": "Child Test Group",
+            "description": "Child group created at {{timestamp}}",
+            "parentId": "{{parentGroupId}}"
+          }
+        }
+      },
+      "step08_getGroupTree": {
+        "id": "step08_getGroupTree",
+        "name": "Get Test Group Tree",
+        "type": "http",
+        "dependsOn": [
+          "step07_createChildGroup"
+        ],
+        "config": {
+          "method": "GET",
+          "url": "{{baseUrl}}/groups/tree",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "step09_assertTreeStructure": {
+        "id": "step09_assertTreeStructure",
+        "name": "Assert Tree Structure",
+        "type": "assert",
+        "dependsOn": [
+          "step08_getGroupTree"
+        ],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step08_getGroupTree.response.statusCode}}",
+              "expected": 200,
+              "message": "Get tree should return 200"
+            }
+          ]
+        }
+      },
+      "step10_updateParentGroup": {
+        "id": "step10_updateParentGroup",
+        "name": "Update Parent Group",
+        "type": "http",
+        "dependsOn": [
+          "step09_assertTreeStructure"
+        ],
+        "config": {
+          "method": "PUT",
+          "url": "{{baseUrl}}/groups/{{parentGroupId}}",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "Updated Parent Group",
+            "description": "Updated at {{timestamp}}"
+          }
+        }
+      },
+      "step11_assertUpdateSuccess": {
+        "id": "step11_assertUpdateSuccess",
+        "name": "Assert Update Success",
+        "type": "assert",
+        "dependsOn": [
+          "step10_updateParentGroup"
+        ],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step10_updateParentGroup.response.statusCode}}",
+              "expected": 200,
+              "message": "Update should return 200"
+            }
+          ]
+        }
+      },
+      "step12_deleteChildGroup": {
+        "id": "step12_deleteChildGroup",
+        "name": "Delete Child Group",
+        "type": "http",
+        "dependsOn": [
+          "step11_assertUpdateSuccess"
+        ],
+        "config": {
+          "method": "DELETE",
+          "url": "{{baseUrl}}/groups/{{childGroupId}}",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "step13_verifyChildDeleted": {
+        "id": "step13_verifyChildDeleted",
+        "name": "Verify Child Deleted in DB",
+        "type": "database",
+        "dependsOn": [
+          "step12_deleteChildGroup"
+        ],
+        "config": {
+          "driver": "sqlite3",
+          "dsn": "{{dbPath}}",
+          "queryType": "select",
+          "query": "SELECT * FROM test_groups WHERE group_id = ? AND deleted_at IS NOT NULL",
+          "args": [
+            "{{childGroupId}}"
+          ]
+        }
+      },
+      "step14_assertSoftDelete": {
+        "id": "step14_assertSoftDelete",
+        "name": "Assert Soft Delete",
+        "type": "assert",
+        "dependsOn": [
+          "step13_verifyChildDeleted"
+        ],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step12_deleteChildGroup.response.statusCode}}",
+              "expected": 200,
+              "message": "Delete should return 200"
+            }
+          ]
+        }
+      },
+      "step15_cleanupTestData": {
+        "id": "step15_cleanupTestData",
+        "name": "Final Cleanup",
+        "type": "database",
+        "dependsOn": [
+          "step14_assertSoftDelete"
+        ],
+        "onError": "continue",
+        "config": {
+          "driver": "sqlite3",
+          "dsn": "{{dbPath}}",
+          "queryType": "exec",
+          "query": "DELETE FROM test_groups WHERE group_id IN (?, ?)",
+          "args": [
+            "{{parentGroupId}}",
+            "{{childGroupId}}"
+          ]
+        }
+      }
+    }
+  }
+}

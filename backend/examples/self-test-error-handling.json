@@ -1,0 +1,233 @@
+{
+  "workflowId": "self-test-error-handling",
+  "name": "Error Handling Tests",
+  "version": "1.0.0",
+  "description": "Tests error responses: 404, 400, 409",
+  "definition": {
+    "name": "Error Handling Tests",
+    "version": "1.0.0",
+    "description": "Negative test cases for error handling",
+    "variables": {
+      "baseUrl": "http://localhost:8090/api",
+      "nonExistentId": "non-existent-id-12345"
+    },
+    "steps": {
+      "step01_get404Group": {
+        "id": "step01_get404Group",
+        "name": "GET Non-existent Group (404)",
+        "type": "http",
+        "config": {
+          "method": "GET",
+          "url": "{{baseUrl}}/groups/{{nonExistentId}}"
+        }
+      },
+      "step02_assert404Group": {
+        "id": "step02_assert404Group",
+        "name": "Assert 404 for Group",
+        "type": "assert",
+        "dependsOn": [
+          "step01_get404Group"
+        ],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step01_get404Group.response.statusCode}}",
+              "expected": 404,
+              "message": "Should return 404 for non-existent group"
+            }
+          ]
+        }
+      },
+      "step03_get404Test": {
+        "id": "step03_get404Test",
+        "name": "GET Non-existent Test (404)",
+        "type": "http",
+        "dependsOn": [
+          "step02_assert404Group"
+        ],
+        "config": {
+          "method": "GET",
+          "url": "{{baseUrl}}/tests/{{nonExistentId}}"
+        }
+      },
+      "step04_assert404Test": {
+        "id": "step04_assert404Test",
+        "name": "Assert 404 for Test",
+        "type": "assert",
+        "dependsOn": [
+          "step03_get404Test"
+        ],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step03_get404Test.response.statusCode}}",
+              "expected": 404,
+              "message": "Should return 404 for non-existent test"
+            }
+          ]
+        }
+      },
+      "step05_get404Env": {
+        "id": "step05_get404Env",
+        "name": "GET Non-existent Environment (404)",
+        "type": "http",
+        "dependsOn": [
+          "step04_assert404Test"
+        ],
+        "config": {
+          "method": "GET",
+          "url": "{{baseUrl}}/environments/{{nonExistentId}}"
+        }
+      },
+      "step06_assert404Env": {
+        "id": "step06_assert404Env",
+        "name": "Assert 404 for Environment",
+        "type": "assert",
+        "dependsOn": [
+          "step05_get404Env"
+        ],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step05_get404Env.response.statusCode}}",
+              "expected": 404,
+              "message": "Should return 404 for non-existent environment"
+            }
+          ]
+        }
+      },
+      "step07_get404Workflow": {
+        "id": "step07_get404Workflow",
+        "name": "GET Non-existent Workflow (404)",
+        "type": "http",
+        "dependsOn": [
+          "step06_assert404Env"
+        ],
+        "config": {
+          "method": "GET",
+          "url": "{{baseUrl}}/workflows/{{nonExistentId}}"
+        }
+      },
+      "step08_assert404Workflow": {
+        "id": "step08_assert404Workflow",
+        "name": "Assert 404 for Workflow",
+        "type": "assert",
+        "dependsOn": [
+          "step07_get404Workflow"
+        ],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step07_get404Workflow.response.statusCode}}",
+              "expected": 404,
+              "message": "Should return 404 for non-existent workflow"
+            }
+          ]
+        }
+      },
+      "step09_delete404": {
+        "id": "step09_delete404",
+        "name": "DELETE Non-existent Resource (404)",
+        "type": "http",
+        "dependsOn": [
+          "step08_assert404Workflow"
+        ],
+        "config": {
+          "method": "DELETE",
+          "url": "{{baseUrl}}/tests/{{nonExistentId}}"
+        }
+      },
+      "step10_assertDelete404": {
+        "id": "step10_assertDelete404",
+        "name": "Assert 404 for Delete",
+        "type": "assert",
+        "dependsOn": [
+          "step09_delete404"
+        ],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step09_delete404.response.statusCode}}",
+              "expected": 404,
+              "message": "DELETE returns 404 for non-existent resource"
+            }
+          ]
+        }
+      },
+      "step11_createInvalidGroup": {
+        "id": "step11_createInvalidGroup",
+        "name": "Create Group with Missing Fields (400)",
+        "type": "http",
+        "dependsOn": [
+          "step10_assertDelete404"
+        ],
+        "config": {
+          "method": "POST",
+          "url": "{{baseUrl}}/groups",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "Test Group"
+          }
+        }
+      },
+      "step12_assert400": {
+        "id": "step12_assert400",
+        "name": "Assert 400 for Invalid Request",
+        "type": "assert",
+        "dependsOn": [
+          "step11_createInvalidGroup"
+        ],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step11_createInvalidGroup.response.statusCode}}",
+              "expected": 400,
+              "message": "Should return 400 for missing required fields"
+            }
+          ]
+        }
+      },
+      "step13_executeNonExistent": {
+        "id": "step13_executeNonExistent",
+        "name": "Execute Non-existent Workflow",
+        "type": "http",
+        "dependsOn": [
+          "step12_assert400"
+        ],
+        "config": {
+          "method": "POST",
+          "url": "{{baseUrl}}/workflows/{{nonExistentId}}/execute",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "step14_assertExecute404": {
+        "id": "step14_assertExecute404",
+        "name": "Assert 500 for Execute (Current Backend Behavior)",
+        "type": "assert",
+        "dependsOn": [
+          "step13_executeNonExistent"
+        ],
+        "config": {
+          "assertions": [
+            {
+              "type": "equals",
+              "actual": "{{step13_executeNonExistent.response.statusCode}}",
+              "expected": 500,
+              "message": "Execute returns 500 for non-existent workflow (backend should return 404)"
+            }
+          ]
+        }
+      }
+    }
+  }
+}
