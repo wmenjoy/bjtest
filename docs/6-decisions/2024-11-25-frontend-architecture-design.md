@@ -2075,10 +2075,10 @@ import {
 ### C. 参考文档
 
 - [TEST_PLATFORM_PRODUCTIZATION_DESIGN.md](./TEST_PLATFORM_PRODUCTIZATION_DESIGN.md) - 产品化设计
-- [UNIFIED_WORKFLOW_ARCHITECTURE.md](./UNIFIED_WORKFLOW_ARCHITECTURE.md) - Workflow架构
-- [SELF_TEST_ORGANIZATION.md](./SELF_TEST_ORGANIZATION.md) - 自测用例组织
-- [DATABASE_DESIGN.md](./DATABASE_DESIGN.md) - 数据库设计
-- [API_DOCUMENTATION.md](./API_DOCUMENTATION.md) - API文档
+- [UNIFIED_WORKFLOW_ARCHITECTURE.md](../../6-decisions/2024-11-24-unified-workflow-architecture.md) - Workflow架构
+- [SELF_TEST_ORGANIZATION.md](../../5-wiki/testcase/self-test-organization.md) - 自测用例组织
+- [DATABASE_DESIGN.md](../../1-specs/database/schema.md) - 数据库设计
+- [API_DOCUMENTATION.md](../../1-specs/api/v2-documentation.md) - API文档
 
 ---
 
