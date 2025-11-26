@@ -492,3 +492,113 @@ Ensure target service is running:
 [test]
 target_host = "http://localhost:9095"
 ```
+
+## Documentation Management
+
+### Documentation Structure
+
+This project uses a **seven-layer documentation architecture** in the `docs/` directory:
+
+1. **1-specs/** - Technical specifications (API, database, backend architecture)
+2. **2-requirements/** - Product requirements, user stories, feature definitions
+3. **3-guides/** - Development, testing, deployment, and user guides
+4. **4-planning/** - Active plans, backlog, completed milestones, archived plans
+5. **5-wiki/** - Business knowledge organized by module (testcase, workflow, tenant, etc.)
+6. **6-decisions/** - Architecture Decision Records (ADRs) with date prefix
+7. **7-archive/** - Historical documents organized by quarter (YYYY-QN/)
+
+**Core Principle**: Every document has ONE correct location based on its type and lifecycle stage.
+
+### Naming Conventions
+
+**Directory naming**:
+- Layers 1-4, 6-7: Use `kebab-case` (e.g., `api/`, `backend/`, `multi-tenant-integration.md`)
+- Layer 5 (wiki): Use lowercase without hyphens (e.g., `actionlibrary/`, `apicenter/`)
+
+**File naming**:
+- All lowercase with hyphens: `feature-name-type.md`
+- ADRs (Layer 6): `YYYY-MM-DD-subject-type.md`
+- Special files: `README.md`, `overview.md`, `_template-*.md`
+
+**docs/ root directory** - Keep clean with only 3 files max:
+- `README.md` - Documentation navigation
+- `directory-standards.md` - Organization rules
+- Temporary reports (should be archived after use)
+
+### When Creating Documentation
+
+**Create new directory when**:
+- ✅ 3+ related documents on same topic
+- ❌ Only 1-2 documents → use flat structure
+
+**Create new file when**:
+- ✅ Content > 500 lines needing split
+- ✅ Different audiences (dev vs user)
+- ✅ Different update frequencies
+- ❌ Can be a section in existing doc
+
+### Document Lifecycle
+
+**1. Creation**:
+- Determine document type (use decision tree in `docs/directory-standards.md`)
+- Follow naming convention
+- Update parent directory's README.md
+
+**2. Maintenance**:
+- Monthly review for accuracy
+- Update when code/architecture changes
+
+**3. Archiving** (when any true):
+- Feature deprecated
+- Superseded by new doc
+- > 6 months without updates and no longer relevant
+- Project phase completed (implementation reports)
+
+**4. Archive location**:
+```
+7-archive/YYYY-QN/
+├── implementation-reports/  # Completed implementation records
+├── plans/                   # Obsolete plans
+├── analysis/               # Historical analysis
+└── feature-designs/        # Implemented feature designs
+```
+
+### Report Documentation
+
+**Type 1: Implementation Reports** (completed) → `7-archive/YYYY-QN/implementation-reports/`
+**Type 2: Analysis Reports** (one-time) → `7-archive/YYYY-QN/analysis/`
+**Type 3: Monitoring Reports** (recurring) → Reference latest in wiki, don't keep history
+**Type 4: Progress Reports** (ongoing) → `4-planning/active/`, move to `completed/` when done
+
+### Quick Reference
+
+**Looking for specs?** → `docs/1-specs/{api|backend|database|ui}/`
+**Need implementation guide?** → `docs/3-guides/development/`
+**Checking project status?** → `docs/4-planning/active/status-YYYY-MM-DD.md`
+**Understanding a module?** → `docs/5-wiki/{module}/overview.md`
+**Reviewing decisions?** → `docs/6-decisions/index.md`
+
+**Full documentation standards**: See `docs/directory-standards.md` (v3.0)
+
+### Documentation References (Updated Paths)
+
+**Backend**:
+- `docs/1-specs/database/schema.md` - Complete database schema
+- `docs/1-specs/api/v2-documentation.md` - API reference
+- `docs/1-specs/backend/websocket-architecture.md` - WebSocket design
+- `docs/3-guides/development/backend-implementation.md` - Backend guide
+- `docs/3-guides/deployment/port-configuration.md` - Port configuration
+
+**Frontend**:
+- `NextTestPlatformUI/README.md` - Setup instructions
+
+**Business Context**:
+- `docs/5-wiki/testcase/overview.md` - Test case module
+- `docs/5-wiki/workflow/overview.md` - Workflow module
+- `docs/5-wiki/tenant/overview.md` - Multi-tenant system
+- `docs/5-wiki/glossary.md` - Unified terminology
+
+**Project Planning**:
+- `docs/4-planning/active/` - Current active plans
+- `docs/4-planning/backlog/roadmap.md` - Future roadmap
+
