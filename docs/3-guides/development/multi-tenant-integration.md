@@ -460,6 +460,6 @@ curl -X GET http://localhost:8090/api/v2/tests
 
 ## 📚 相关文档
 
-- [多租户中间件使用指南](./MULTI_TENANT_MIDDLEWARE.md)
-- [多租户实现进度](./MULTI_TENANT_PROGRESS.md)
-- [数据库设计](./DATABASE_DESIGN.md)
+- [多租户中间件使用指南](../../5-wiki/tenant/middleware.md)
+- [多租户实现进度](../../4-planning/completed/2024-Q4/multi-tenant-progress.md)
+- [数据库设计](../../1-specs/database/schema.md)

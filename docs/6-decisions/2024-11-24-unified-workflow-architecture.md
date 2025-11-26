@@ -1569,9 +1569,9 @@ func (s *ActionRecommendationService) Recommend(ctx context.Context, req *Recomm
 
 ### 13.1 参考文档
 
-- [DATABASE_DESIGN.md](./DATABASE_DESIGN.md) - 数据库设计文档
-- [API_DOCUMENTATION.md](./API_DOCUMENTATION.md) - API 文档
-- [STEP_CONTROL_FLOW_DESIGN.md](./STEP_CONTROL_FLOW_DESIGN.md) - 控制流设计
+- [DATABASE_DESIGN.md](../../1-specs/database/schema.md) - 数据库设计文档
+- [API_DOCUMENTATION.md](../../1-specs/api/v2-documentation.md) - API 文档
+- [STEP_CONTROL_FLOW_DESIGN.md](../../1-specs/ui/step-control-flow.md) - 控制流设计
 - [TESTCASE_WORKFLOW_INTEGRATION.md](./TESTCASE_WORKFLOW_INTEGRATION.md) - Workflow 集成
 
 ### 13.2 相关 Issue

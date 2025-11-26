@@ -1247,7 +1247,7 @@ tail -f /var/log/test-management-service.log | grep "VariableInjector"
 如遇到其他问题，请：
 
 1. **查看日志**: `/var/log/test-management-service.log`
-2. **检查文档**: [API 文档](./API_DOCUMENTATION.md)
+2. **检查文档**: [API 文档](../../1-specs/api/v2-documentation.md)
 3. **提交 Issue**: [GitHub Issues](https://github.com/your-org/test-management-service/issues)
 4. **联系支持**: support@example.com
 
