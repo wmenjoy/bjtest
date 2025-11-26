@@ -7,11 +7,15 @@
  * @module testcase/dataflow
  */
 
-// Main diagram component
+// Main diagram component (static visualization)
 export { DataFlowDiagram } from './DataFlowDiagram';
 export type { DataFlowDiagramProps } from './DataFlowDiagram';
 
-// Step node component
+// Interactive React Flow editor (NEW)
+export { DataFlowEditor } from './DataFlowEditor';
+export { ReactFlowStepNode } from './ReactFlowStepNode';
+
+// Step node component (for static diagram)
 export { StepNode } from './StepNode';
 export type { StepNodeProps, ExecutionStatusType } from './StepNode';
 
@@ -26,3 +30,6 @@ export type { VariableTrackerProps } from './VariableTracker';
 // Loop data flow component
 export { LoopDataFlow } from './LoopDataFlow';
 export type { LoopDataFlowProps } from './LoopDataFlow';
+
+// Utilities
+export * from './utils';

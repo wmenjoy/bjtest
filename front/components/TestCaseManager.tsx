@@ -10,6 +10,7 @@ import { AIGeneratorModal } from './testcase/AIGeneratorModal';
 import { Toast } from './ui/LoadingState';
 import { QuickFilter } from './testcase/QuickFilter';
 import { testCaseStatsApi, TestStatistics } from '../services/api/testCaseStatsApi';
+import { ExecutionPanel } from './testcase/ExecutionPanel';
 
 interface TestCaseManagerProps {
   cases: TestCase[];
@@ -36,6 +37,7 @@ export const TestCaseManager: React.FC<TestCaseManagerProps> = ({ cases, folders
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [statistics, setStatistics] = useState<TestStatistics | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
+  const [latestRun, setLatestRun] = useState<TestRun | null>(null);
 
   const filteredCases = useMemo(() => {
      return cases.filter(c => c.folderId === selectedFolderId);
@@ -45,6 +47,26 @@ export const TestCaseManager: React.FC<TestCaseManagerProps> = ({ cases, folders
   useEffect(() => {
     loadStatistics();
   }, []);
+
+  // Update latest run when selectedCase or runs change
+  useEffect(() => {
+    if (selectedCase && runs.length > 0) {
+      const caseRuns = runs.filter(r => r.caseId === selectedCase.id);
+      if (caseRuns.length > 0) {
+        // Get the most recent run
+        const sorted = caseRuns.sort((a, b) => {
+          const dateA = new Date(a.startedAt || 0).getTime();
+          const dateB = new Date(b.startedAt || 0).getTime();
+          return dateB - dateA;
+        });
+        setLatestRun(sorted[0]);
+      } else {
+        setLatestRun(null);
+      }
+    } else {
+      setLatestRun(null);
+    }
+  }, [selectedCase, runs]);
 
   const loadStatistics = async () => {
     try {
@@ -164,33 +186,43 @@ export const TestCaseManager: React.FC<TestCaseManagerProps> = ({ cases, folders
   };
 
   return (
-    <div className="flex h-[calc(100vh-140px)] bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
+    <div className="flex flex-col h-[calc(100vh-140px)] bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
 
-      {/* 左栏: 增强的FolderTree (固定350px宽度) */}
-      <div className="w-[350px] border-r border-slate-200 flex-shrink-0">
-        <FolderTree
-          folders={folders}
-          cases={cases}
-          selectedFolderId={selectedFolderId}
-          selectedCaseId={selectedCase?.id || null}
-          onSelectFolder={setSelectedFolderId}
-          onSelectCase={setSelectedCase}
-          onEditCase={(c) => { setSelectedCase(c); setIsEditing(true); }}
-          onAddFolder={handleAddFolder}
-          statistics={statistics}
-          statsLoading={statsLoading}
-        />
+      {/* Main Content Area - Upper Section with Horizontal Split */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* 左栏: FolderTree (收窄到280px) */}
+        <div className="w-[280px] border-r border-slate-200 flex-shrink-0">
+          <FolderTree
+            folders={folders}
+            cases={cases}
+            selectedFolderId={selectedFolderId}
+            selectedCaseId={selectedCase?.id || null}
+            onSelectFolder={setSelectedFolderId}
+            onSelectCase={setSelectedCase}
+            onEditCase={(c) => { setSelectedCase(c); setIsEditing(true); }}
+            onAddFolder={handleAddFolder}
+            statistics={statistics}
+            statsLoading={statsLoading}
+          />
+        </div>
+
+        {/* 右栏: CaseDetail (占据剩余空间) */}
+        <div className="flex-1 overflow-hidden">
+          <CaseDetail
+            testCase={selectedCase}
+            onEdit={() => setIsEditing(true)}
+            onRun={() => setIsRunning(true)}
+            onDelete={handleDeleteCase}
+          />
+        </div>
       </div>
 
-      {/* 右栏: 案例详情 (占据剩余空间) */}
-      <div className="flex-1 overflow-hidden">
-        <CaseDetail
-          testCase={selectedCase}
-          onEdit={() => setIsEditing(true)}
-          onRun={() => setIsRunning(true)}
-          onDelete={handleDeleteCase}
-        />
-      </div>
+      {/* Bottom Execution Panel - Always visible when a test case is selected */}
+      <ExecutionPanel
+        testCase={selectedCase}
+        latestRun={latestRun}
+        isRunning={isRunning}
+      />
 
       {/* 编辑器 (右侧滑入，70%宽度，不遮挡左栏) */}
       {isEditing && selectedCase && (
@@ -214,6 +246,7 @@ export const TestCaseManager: React.FC<TestCaseManagerProps> = ({ cases, folders
           activeEnvironment={activeEnvironment}
           onComplete={(run) => {
             onRunComplete(run);
+            setLatestRun(run); // Update latest run immediately
             setIsRunning(false);
           }}
           onCancel={() => setIsRunning(false)}

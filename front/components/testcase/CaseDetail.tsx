@@ -55,7 +55,7 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({ testCase, onEdit, onRun,
 
     return (
         <div className="flex-1 flex flex-col bg-slate-50/30 overflow-hidden">
-            <div className="p-6 border-b border-slate-200 bg-white flex justify-between items-start">
+            <div className="p-4 border-b border-slate-200 bg-white flex justify-between items-start">
                 <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
                         <h2 className="text-xl font-bold text-slate-800 truncate">{testCase.title}</h2>
@@ -86,17 +86,17 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({ testCase, onEdit, onRun,
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">{/* Reduced padding from p-6 to p-4 */}
                 {/* Workflow Type - Show linked workflow info */}
                 {(testCase.linkedWorkflowId || testCase.automationType === 'WORKFLOW') ? (
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div className="px-6 py-4 border-b border-slate-100 bg-indigo-50 flex justify-between items-center">
+                        <div className="px-4 py-3 border-b border-slate-100 bg-indigo-50 flex justify-between items-center">{/* Reduced padding */}
                             <h3 className="font-semibold text-indigo-700 flex items-center space-x-2">
                                 <Workflow size={18} />
                                 <span>Linked Workflow</span>
                             </h3>
                         </div>
-                        <div className="p-6">
+                        <div className="p-4">{/* Reduced padding */}
                             <div className="flex items-center justify-between mb-4">
                                 <div>
                                     <p className="text-sm text-slate-500 mb-1">Workflow ID</p>
@@ -116,7 +116,7 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({ testCase, onEdit, onRun,
                 ) : (
                     /* HTTP/Command/Manual Type - Show steps */
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                        <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center">{/* Reduced padding */}
                             <h3 className="font-semibold text-slate-700">{t('testCase.definition')}</h3>
                             <ViewModeSwitcher currentMode={viewMode} onChange={setViewMode} />
                         </div>
@@ -125,7 +125,7 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({ testCase, onEdit, onRun,
                             /* List View */
                             <div className="divide-y divide-slate-100">
                                 {testCase.steps.length > 0 ? testCase.steps.map((step, idx) => (
-                                    <div key={step.id} className="p-4 grid grid-cols-12 gap-4 group hover:bg-slate-50/50 transition-colors">
+                                    <div key={step.id} className="p-3 grid grid-cols-12 gap-3 group hover:bg-slate-50/50 transition-colors">{/* Reduced padding and gap */}
                                         <div className="col-span-1 flex flex-col items-center pt-1 text-slate-300">
                                             <span className="text-xs font-bold">#{idx + 1}</span>
                                             <div className="mt-2">
@@ -150,22 +150,26 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({ testCase, onEdit, onRun,
                                             </div>
 
                                             {/* Param Visualization */}
-                                            <div className="bg-slate-50 rounded border border-slate-100 p-2 text-xs font-mono text-slate-600 grid grid-cols-2 gap-4">
+                                            <div className="bg-slate-50 rounded border border-slate-100 p-2 text-xs font-mono text-slate-600 grid grid-cols-2 gap-3">{/* Reduced gap */}
                                                 <div>
                                                     <span className="text-[10px] text-slate-400 uppercase font-sans font-bold mb-1 block">Inputs</span>
                                                     {step.parameterValues && Object.keys(step.parameterValues).length > 0 ? (
                                                         Object.entries(step.parameterValues).map(([k,v]) => (
-                                                            <div key={k} className="flex space-x-1"><span className="text-slate-500">{k}:</span> <span className="text-blue-600 truncate max-w-[150px]">{String(v)}</span></div>
+                                                            <div key={k} className="flex space-x-1 text-[11px]">{/* Reduced font size */}
+                                                                <span className="text-slate-500">{k}:</span> <span className="text-blue-600 truncate max-w-[150px]">{String(v)}</span>
+                                                            </div>
                                                         ))
-                                                    ) : <span className="text-slate-400 italic">-</span>}
+                                                    ) : <span className="text-slate-400 italic text-[11px]">-</span>}
                                                 </div>
                                                 <div>
                                                     <span className="text-[10px] text-slate-400 uppercase font-sans font-bold mb-1 block">Outputs</span>
                                                     {step.outputMapping && Object.keys(step.outputMapping).length > 0 ? (
                                                         Object.entries(step.outputMapping).map(([k,v]) => (
-                                                            <div key={k} className="flex space-x-1"><span className="text-slate-500">{k}</span> <span className="text-slate-300">→</span> <span className="text-cyan-600">{v}</span></div>
+                                                            <div key={k} className="flex space-x-1 text-[11px]">{/* Reduced font size */}
+                                                                <span className="text-slate-500">{k}</span> <span className="text-slate-300">→</span> <span className="text-cyan-600">{v}</span>
+                                                            </div>
                                                         ))
-                                                    ) : <span className="text-slate-400 italic">-</span>}
+                                                    ) : <span className="text-slate-400 italic text-[11px]">-</span>}
                                                 </div>
                                             </div>
                                         </div>
@@ -174,7 +178,7 @@ export const CaseDetail: React.FC<CaseDetailProps> = ({ testCase, onEdit, onRun,
                             </div>
                         ) : (
                             /* Workflow View */
-                            <div className="p-6 overflow-y-auto max-h-[600px]">
+                            <div className="p-4 overflow-y-auto max-h-[600px]">{/* Reduced padding */}
                                 <WorkflowView steps={testCase.steps} />
                             </div>
                         )}

@@ -5,6 +5,7 @@ import { Bot, Workflow, ArrowDown, Globe, Terminal, GitBranch, Repeat } from 'lu
 interface WorkflowViewProps {
   steps: WorkflowStep[];
   onStepClick?: (step: WorkflowStep) => void;
+  onStepsChange?: (steps: WorkflowStep[]) => void;
 }
 
 interface WorkflowNodeProps {
@@ -131,7 +132,7 @@ const WorkflowNode: React.FC<WorkflowNodeProps> = ({ step, index, isLast, onClic
   );
 };
 
-export const WorkflowView: React.FC<WorkflowViewProps> = ({ steps, onStepClick }) => {
+export const WorkflowView: React.FC<WorkflowViewProps> = ({ steps, onStepClick, onStepsChange }) => {
   const [selectedStep, setSelectedStep] = useState<WorkflowStep | null>(null);
 
   const handleStepClick = (step: WorkflowStep) => {
@@ -149,34 +150,46 @@ export const WorkflowView: React.FC<WorkflowViewProps> = ({ steps, onStepClick }
   }
 
   return (
-    <div className="relative">
-      {/* Start Node */}
-      <div className="flex flex-col items-center mb-4">
-        <div className="w-32 h-12 bg-green-500 text-white rounded-full flex items-center justify-center font-bold shadow-md">
-          Start
-        </div>
-        <div className="flex flex-col items-center my-2">
-          <ArrowDown size={20} className="text-slate-400" />
+    <div className="relative h-full flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4 px-4 py-2 bg-white rounded-lg border border-slate-200">
+        <div className="flex items-center space-x-2">
+          <Workflow size={16} className="text-slate-600" />
+          <span className="text-sm font-semibold text-slate-700">Workflow Steps</span>
+          <span className="text-xs text-slate-400">({steps.length} steps)</span>
         </div>
       </div>
 
-      {/* Steps */}
-      <div className="flex flex-col items-center space-y-0">
-        {steps.map((step, index) => (
-          <WorkflowNode
-            key={step.id}
-            step={step}
-            index={index}
-            isLast={index === steps.length - 1}
-            onClick={handleStepClick}
-          />
-        ))}
-      </div>
+      {/* Content Area - List View Only */}
+      <div className="flex-1 overflow-auto">
+          {/* Start Node */}
+          <div className="flex flex-col items-center mb-4">
+            <div className="w-32 h-12 bg-green-500 text-white rounded-full flex items-center justify-center font-bold shadow-md">
+              Start
+            </div>
+            <div className="flex flex-col items-center my-2">
+              <ArrowDown size={20} className="text-slate-400" />
+            </div>
+          </div>
 
-      {/* End Node */}
-      <div className="flex flex-col items-center mt-4">
-        <div className="w-32 h-12 bg-slate-500 text-white rounded-full flex items-center justify-center font-bold shadow-md">
-          End
+          {/* Steps */}
+          <div className="flex flex-col items-center space-y-0">
+            {steps.map((step, index) => (
+              <WorkflowNode
+                key={step.id}
+                step={step}
+                index={index}
+                isLast={index === steps.length - 1}
+                onClick={handleStepClick}
+              />
+            ))}
+          </div>
+
+        {/* End Node */}
+        <div className="flex flex-col items-center mt-4">
+          <div className="w-32 h-12 bg-slate-500 text-white rounded-full flex items-center justify-center font-bold shadow-md">
+            End
+          </div>
         </div>
       </div>
 

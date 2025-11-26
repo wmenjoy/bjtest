@@ -14,14 +14,20 @@ import {
   Layers,
   GripVertical,
   Package,
-  Settings
+  Settings,
+  Play,
+  Loader2,
+  GitMerge,
+  Workflow
 } from 'lucide-react';
 import { BranchConfigEditor } from './BranchConfigEditor';
 import { ChildStepList } from './ChildStepList';
 import { ActionTemplateSelector } from './ActionTemplateSelector';
 import { TemplateConfigSection } from './TemplateConfigSection';
 import { InlineConfigSection } from './InlineConfigSection';
+import { StepTestResultModal } from './StepTestResultModal';
 import { actionTemplateApi, ActionTemplate } from '../../../services/api/actionTemplateApi';
+import { executeStep, StepExecutionResult } from '../../../services/stepExecutor';
 
 interface StepCardProps {
   step: TestStep;
@@ -43,7 +49,9 @@ const STEP_TYPE_ICONS: Record<string, React.ReactNode> = {
   command: <Terminal size={14} />,
   assert: <CheckCircle size={14} />,
   branch: <GitBranch size={14} />,
-  group: <Layers size={14} />
+  group: <Layers size={14} />,
+  merge: <GitMerge size={14} />,
+  parallel: <Workflow size={14} />
 };
 
 // Step type colors
@@ -52,7 +60,9 @@ const STEP_TYPE_COLORS: Record<string, string> = {
   command: 'bg-orange-100 text-orange-700 border-orange-200',
   assert: 'bg-cyan-100 text-cyan-700 border-cyan-200',
   branch: 'bg-purple-100 text-purple-700 border-purple-200',
-  group: 'bg-slate-100 text-slate-700 border-slate-200'
+  group: 'bg-slate-100 text-slate-700 border-slate-200',
+  merge: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+  parallel: 'bg-pink-100 text-pink-700 border-pink-200'
 };
 
 export const StepCard: React.FC<StepCardProps> = ({
@@ -73,15 +83,20 @@ export const StepCard: React.FC<StepCardProps> = ({
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<ActionTemplate | null>(null);
 
+  // Step testing state
+  const [isTestingStep, setIsTestingStep] = useState(false);
+  const [testResult, setTestResult] = useState<StepExecutionResult | null>(null);
+  const [showTestResult, setShowTestResult] = useState(false);
+
   // Load template details if actionTemplateId is set
   useEffect(() => {
-    if (step.linkedScriptId && !selectedTemplate) {
-      // linkedScriptId is being used as actionTemplateId for now
-      actionTemplateApi.getTemplate(step.linkedScriptId)
+    const templateId = step.actionTemplateId || step.linkedScriptId;
+    if (templateId && !selectedTemplate) {
+      actionTemplateApi.getTemplate(templateId)
         .then(setSelectedTemplate)
         .catch(console.error);
     }
-  }, [step.linkedScriptId, selectedTemplate]);
+  }, [step.actionTemplateId, step.linkedScriptId, selectedTemplate]);
 
   // Calculate left margin based on depth
   const marginLeft = depth * 24;
@@ -113,7 +128,9 @@ export const StepCard: React.FC<StepCardProps> = ({
     // Update step with template reference
     onChange({
       ...step,
-      linkedScriptId: template.templateId, // Using linkedScriptId as actionTemplateId
+      actionTemplateId: template.templateId,
+      actionVersion: '1.0',
+      linkedScriptId: template.templateId, // Backward compatibility
       type: template.type,
       name: step.name || template.name,
       inputs: initialInputs,
@@ -144,8 +161,10 @@ export const StepCard: React.FC<StepCardProps> = ({
       linkedScriptId: undefined,
       actionTemplateId: undefined,
       actionVersion: undefined,
-      inputs: undefined,
-      // Keep config for inline mode
+      inputs: {},
+      outputs: {},
+      // Initialize default config for inline mode
+      config: step.type === 'http' ? { method: 'GET', url: '' } : step.type === 'command' ? { cmd: '' } : {}
     });
   };
 
@@ -153,6 +172,40 @@ export const StepCard: React.FC<StepCardProps> = ({
   const handleChildrenChange = (children: TestStep[]) => {
     onChange({ ...step, children });
   };
+
+  // Handle step testing
+  const handleTestStep = async () => {
+    setIsTestingStep(true);
+    setTestResult(null);
+
+    try {
+      const result = await executeStep(step, variables);
+      setTestResult(result);
+      setShowTestResult(true);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setTestResult({
+        success: false,
+        status: 'error',
+        duration: 0,
+        startTime: new Date().toISOString(),
+        endTime: new Date().toISOString(),
+        inputs: variables,
+        outputs: {},
+        error: errorMessage,
+        logs: [`Error: ${errorMessage}`],
+      });
+      setShowTestResult(true);
+    } finally {
+      setIsTestingStep(false);
+    }
+  };
+
+  // Check if step is testable
+  const isTestable = step.type === 'http' || step.type === 'command' || step.type === 'merge';
+
+  // Check if step has dependencies
+  const hasDependencies = step.dependsOn && step.dependsOn.length > 0;
 
   // Render child step cards recursively
   const renderChildStepCard = (
@@ -263,6 +316,14 @@ export const StepCard: React.FC<StepCardProps> = ({
                     {stepType}
                   </span>
 
+                  {/* Dependencies Indicator */}
+                  {hasDependencies && (
+                    <span className="flex items-center space-x-1 text-[10px] px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-medium">
+                      <Workflow size={10} />
+                      <span>depends on {step.dependsOn?.length}</span>
+                    </span>
+                  )}
+
                   {/* Branch Indicator */}
                   {hasBranches && (
                     <span className="flex items-center space-x-1 text-[10px] px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">
@@ -289,6 +350,31 @@ export const StepCard: React.FC<StepCardProps> = ({
 
               {/* Action Buttons */}
               <div className="flex items-center space-x-1 ml-3">
+                {isTestable && (
+                  <button
+                    type="button"
+                    onClick={handleTestStep}
+                    disabled={isTestingStep}
+                    className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all font-medium ${
+                      isTestingStep
+                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                        : 'bg-green-100 text-green-700 hover:bg-green-200 hover:shadow-sm'
+                    }`}
+                    title="Test this step independently"
+                  >
+                    {isTestingStep ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin" />
+                        <span className="text-xs">Testing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play size={14} />
+                        <span className="text-xs">Test</span>
+                      </>
+                    )}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setIsEditing(true)}
@@ -431,6 +517,15 @@ export const StepCard: React.FC<StepCardProps> = ({
           onSelect={handleTemplateSelect}
           onClose={() => setShowTemplateSelector(false)}
           selectedTemplateId={step.linkedScriptId}
+        />
+      )}
+
+      {/* Step Test Result Modal */}
+      {showTestResult && testResult && (
+        <StepTestResultModal
+          result={testResult}
+          stepName={step.name || step.summary || 'Unnamed Step'}
+          onClose={() => setShowTestResult(false)}
         />
       )}
     </div>
