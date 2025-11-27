@@ -28,7 +28,7 @@ type WorkflowService interface {
 }
 
 type workflowService struct {
-	workflowRepo    *repository.WorkflowRepository
+	workflowRepo    repository.WorkflowRepository
 	workflowRunRepo *repository.WorkflowRunRepository
 	stepExecRepo    repository.StepExecutionRepository
 	stepLogRepo     repository.StepLogRepository
@@ -38,7 +38,7 @@ type workflowService struct {
 
 // NewWorkflowService creates a new workflow service
 func NewWorkflowService(
-	workflowRepo *repository.WorkflowRepository,
+	workflowRepo repository.WorkflowRepository,
 	workflowRunRepo *repository.WorkflowRunRepository,
 	stepExecRepo repository.StepExecutionRepository,
 	stepLogRepo repository.StepLogRepository,

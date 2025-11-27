@@ -7,18 +7,32 @@ import (
 	"gorm.io/gorm"
 )
 
-// WorkflowRepository handles workflow data access
-type WorkflowRepository struct {
+// WorkflowRepository defines the interface for workflow data access
+type WorkflowRepository interface {
+	GetWorkflow(workflowID string) (*models.Workflow, error)
+	GetWorkflowWithTenant(ctx context.Context, workflowID, tenantID, projectID string) (*models.Workflow, error)
+	ListWorkflows(isTestCase *bool) ([]models.Workflow, error)
+	ListWorkflowsWithTenant(ctx context.Context, tenantID, projectID string, isTestCase *bool, offset, limit int) ([]models.Workflow, int64, error)
+	CreateWorkflow(workflow *models.Workflow) error
+	CreateWorkflowWithTenant(ctx context.Context, workflow *models.Workflow) error
+	UpdateWorkflow(workflow *models.Workflow) error
+	UpdateWorkflowWithTenant(ctx context.Context, workflow *models.Workflow) error
+	DeleteWorkflow(workflowID string) error
+	DeleteWorkflowWithTenant(ctx context.Context, workflowID, tenantID, projectID string) error
+}
+
+// workflowRepository handles workflow data access
+type workflowRepository struct {
 	db *gorm.DB
 }
 
 // NewWorkflowRepository creates a new repository
-func NewWorkflowRepository(db *gorm.DB) *WorkflowRepository {
-	return &WorkflowRepository{db: db}
+func NewWorkflowRepository(db *gorm.DB) WorkflowRepository {
+	return &workflowRepository{db: db}
 }
 
 // GetWorkflow retrieves a workflow by workflowID (legacy method without tenant isolation)
-func (r *WorkflowRepository) GetWorkflow(workflowID string) (*models.Workflow, error) {
+func (r *workflowRepository) GetWorkflow(workflowID string) (*models.Workflow, error) {
 	var workflow models.Workflow
 
 	result := r.db.Where("workflow_id = ? AND deleted_at IS NULL", workflowID).First(&workflow)
@@ -33,7 +47,7 @@ func (r *WorkflowRepository) GetWorkflow(workflowID string) (*models.Workflow, e
 }
 
 // GetWorkflowWithTenant retrieves a workflow with tenant isolation
-func (r *WorkflowRepository) GetWorkflowWithTenant(ctx context.Context, workflowID, tenantID, projectID string) (*models.Workflow, error) {
+func (r *workflowRepository) GetWorkflowWithTenant(ctx context.Context, workflowID, tenantID, projectID string) (*models.Workflow, error) {
 	var workflow models.Workflow
 
 	result := r.db.WithContext(ctx).
@@ -52,7 +66,7 @@ func (r *WorkflowRepository) GetWorkflowWithTenant(ctx context.Context, workflow
 }
 
 // ListWorkflows retrieves all workflows with optional filters
-func (r *WorkflowRepository) ListWorkflows(isTestCase *bool) ([]models.Workflow, error) {
+func (r *workflowRepository) ListWorkflows(isTestCase *bool) ([]models.Workflow, error) {
 	var workflows []models.Workflow
 
 	query := r.db.Where("deleted_at IS NULL")
@@ -69,7 +83,7 @@ func (r *WorkflowRepository) ListWorkflows(isTestCase *bool) ([]models.Workflow,
 }
 
 // ListWorkflowsWithTenant retrieves workflows with tenant isolation and pagination
-func (r *WorkflowRepository) ListWorkflowsWithTenant(ctx context.Context, tenantID, projectID string, isTestCase *bool, offset, limit int) ([]models.Workflow, int64, error) {
+func (r *workflowRepository) ListWorkflowsWithTenant(ctx context.Context, tenantID, projectID string, isTestCase *bool, offset, limit int) ([]models.Workflow, int64, error) {
 	var workflows []models.Workflow
 	var total int64
 
@@ -95,7 +109,7 @@ func (r *WorkflowRepository) ListWorkflowsWithTenant(ctx context.Context, tenant
 }
 
 // CreateWorkflow creates a new workflow
-func (r *WorkflowRepository) CreateWorkflow(workflow *models.Workflow) error {
+func (r *workflowRepository) CreateWorkflow(workflow *models.Workflow) error {
 	result := r.db.Create(workflow)
 	if result.Error != nil {
 		return fmt.Errorf("failed to create workflow: %w", result.Error)
@@ -104,7 +118,7 @@ func (r *WorkflowRepository) CreateWorkflow(workflow *models.Workflow) error {
 }
 
 // CreateWorkflowWithTenant creates a new workflow with tenant validation
-func (r *WorkflowRepository) CreateWorkflowWithTenant(ctx context.Context, workflow *models.Workflow) error {
+func (r *workflowRepository) CreateWorkflowWithTenant(ctx context.Context, workflow *models.Workflow) error {
 	// Validate tenant and project are set
 	if workflow.TenantID == "" {
 		return fmt.Errorf("tenant_id is required")
@@ -121,7 +135,7 @@ func (r *WorkflowRepository) CreateWorkflowWithTenant(ctx context.Context, workf
 }
 
 // UpdateWorkflow updates an existing workflow
-func (r *WorkflowRepository) UpdateWorkflow(workflow *models.Workflow) error {
+func (r *workflowRepository) UpdateWorkflow(workflow *models.Workflow) error {
 	result := r.db.Save(workflow)
 	if result.Error != nil {
 		return fmt.Errorf("failed to update workflow: %w", result.Error)
@@ -130,7 +144,7 @@ func (r *WorkflowRepository) UpdateWorkflow(workflow *models.Workflow) error {
 }
 
 // UpdateWorkflowWithTenant updates a workflow with tenant isolation
-func (r *WorkflowRepository) UpdateWorkflowWithTenant(ctx context.Context, workflow *models.Workflow) error {
+func (r *workflowRepository) UpdateWorkflowWithTenant(ctx context.Context, workflow *models.Workflow) error {
 	// Validate tenant and project match
 	if workflow.TenantID == "" || workflow.ProjectID == "" {
 		return fmt.Errorf("tenant_id and project_id are required")
@@ -154,7 +168,7 @@ func (r *WorkflowRepository) UpdateWorkflowWithTenant(ctx context.Context, workf
 }
 
 // DeleteWorkflow soft deletes a workflow
-func (r *WorkflowRepository) DeleteWorkflow(workflowID string) error {
+func (r *workflowRepository) DeleteWorkflow(workflowID string) error {
 	result := r.db.Where("workflow_id = ?", workflowID).Delete(&models.Workflow{})
 	if result.Error != nil {
 		return fmt.Errorf("failed to delete workflow: %w", result.Error)
@@ -163,7 +177,7 @@ func (r *WorkflowRepository) DeleteWorkflow(workflowID string) error {
 }
 
 // DeleteWorkflowWithTenant soft deletes a workflow with tenant isolation
-func (r *WorkflowRepository) DeleteWorkflowWithTenant(ctx context.Context, workflowID, tenantID, projectID string) error {
+func (r *workflowRepository) DeleteWorkflowWithTenant(ctx context.Context, workflowID, tenantID, projectID string) error {
 	result := r.db.WithContext(ctx).
 		Where("workflow_id = ? AND tenant_id = ? AND project_id = ?",
 			workflowID, tenantID, projectID).
