@@ -7,18 +7,32 @@ import (
 	"gorm.io/gorm"
 )
 
-// WorkflowRunRepository handles workflow run data access
-type WorkflowRunRepository struct {
+// WorkflowRunRepository defines the interface for workflow run data access
+type WorkflowRunRepository interface {
+	Create(run *models.WorkflowRun) error
+	Update(run *models.WorkflowRun) error
+	GetByRunID(runID string) (*models.WorkflowRun, error)
+	ListByWorkflowID(workflowID string, limit int) ([]models.WorkflowRun, error)
+	CreateWithTenant(ctx context.Context, run *models.WorkflowRun) error
+	UpdateWithTenant(ctx context.Context, run *models.WorkflowRun) error
+	GetByRunIDWithTenant(ctx context.Context, runID, tenantID, projectID string) (*models.WorkflowRun, error)
+	ListByWorkflowIDWithTenant(ctx context.Context, workflowID, tenantID, projectID string, limit int) ([]models.WorkflowRun, error)
+	ListWithTenant(ctx context.Context, tenantID, projectID string, offset, limit int) ([]models.WorkflowRun, int64, error)
+	DeleteWithTenant(ctx context.Context, runID, tenantID, projectID string) error
+}
+
+// workflowRunRepository handles workflow run data access
+type workflowRunRepository struct {
 	db *gorm.DB
 }
 
 // NewWorkflowRunRepository creates a new repository
-func NewWorkflowRunRepository(db *gorm.DB) *WorkflowRunRepository {
-	return &WorkflowRunRepository{db: db}
+func NewWorkflowRunRepository(db *gorm.DB) WorkflowRunRepository {
+	return &workflowRunRepository{db: db}
 }
 
 // Create creates a new workflow run record
-func (r *WorkflowRunRepository) Create(run *models.WorkflowRun) error {
+func (r *workflowRunRepository) Create(run *models.WorkflowRun) error {
 	result := r.db.Create(run)
 	if result.Error != nil {
 		return fmt.Errorf("failed to create workflow run: %w", result.Error)
@@ -27,7 +41,7 @@ func (r *WorkflowRunRepository) Create(run *models.WorkflowRun) error {
 }
 
 // Update updates a workflow run record
-func (r *WorkflowRunRepository) Update(run *models.WorkflowRun) error {
+func (r *workflowRunRepository) Update(run *models.WorkflowRun) error {
 	result := r.db.Save(run)
 	if result.Error != nil {
 		return fmt.Errorf("failed to update workflow run: %w", result.Error)
@@ -36,7 +50,7 @@ func (r *WorkflowRunRepository) Update(run *models.WorkflowRun) error {
 }
 
 // GetByRunID retrieves a workflow run by runID
-func (r *WorkflowRunRepository) GetByRunID(runID string) (*models.WorkflowRun, error) {
+func (r *workflowRunRepository) GetByRunID(runID string) (*models.WorkflowRun, error) {
 	var run models.WorkflowRun
 
 	result := r.db.Where("run_id = ?", runID).First(&run)
@@ -51,7 +65,7 @@ func (r *WorkflowRunRepository) GetByRunID(runID string) (*models.WorkflowRun, e
 }
 
 // ListByWorkflowID retrieves all runs for a workflow
-func (r *WorkflowRunRepository) ListByWorkflowID(workflowID string, limit int) ([]models.WorkflowRun, error) {
+func (r *workflowRunRepository) ListByWorkflowID(workflowID string, limit int) ([]models.WorkflowRun, error) {
 	var runs []models.WorkflowRun
 
 	query := r.db.Where("workflow_id = ?", workflowID).Order("start_time DESC")
@@ -68,7 +82,7 @@ func (r *WorkflowRunRepository) ListByWorkflowID(workflowID string, limit int) (
 }
 
 // CreateWithTenant creates a new workflow run record with tenant validation
-func (r *WorkflowRunRepository) CreateWithTenant(ctx context.Context, run *models.WorkflowRun) error {
+func (r *workflowRunRepository) CreateWithTenant(ctx context.Context, run *models.WorkflowRun) error {
 	// Validate tenant and project are set
 	if run.TenantID == "" {
 		return fmt.Errorf("tenant_id is required")
@@ -85,7 +99,7 @@ func (r *WorkflowRunRepository) CreateWithTenant(ctx context.Context, run *model
 }
 
 // UpdateWithTenant updates a workflow run record with tenant isolation
-func (r *WorkflowRunRepository) UpdateWithTenant(ctx context.Context, run *models.WorkflowRun) error {
+func (r *workflowRunRepository) UpdateWithTenant(ctx context.Context, run *models.WorkflowRun) error {
 	// Validate tenant and project match
 	if run.TenantID == "" || run.ProjectID == "" {
 		return fmt.Errorf("tenant_id and project_id are required")
@@ -109,7 +123,7 @@ func (r *WorkflowRunRepository) UpdateWithTenant(ctx context.Context, run *model
 }
 
 // GetByRunIDWithTenant retrieves a workflow run with tenant isolation
-func (r *WorkflowRunRepository) GetByRunIDWithTenant(ctx context.Context, runID, tenantID, projectID string) (*models.WorkflowRun, error) {
+func (r *workflowRunRepository) GetByRunIDWithTenant(ctx context.Context, runID, tenantID, projectID string) (*models.WorkflowRun, error) {
 	var run models.WorkflowRun
 
 	result := r.db.WithContext(ctx).
@@ -128,7 +142,7 @@ func (r *WorkflowRunRepository) GetByRunIDWithTenant(ctx context.Context, runID,
 }
 
 // ListByWorkflowIDWithTenant retrieves all runs for a workflow with tenant isolation
-func (r *WorkflowRunRepository) ListByWorkflowIDWithTenant(ctx context.Context, workflowID, tenantID, projectID string, limit int) ([]models.WorkflowRun, error) {
+func (r *workflowRunRepository) ListByWorkflowIDWithTenant(ctx context.Context, workflowID, tenantID, projectID string, limit int) ([]models.WorkflowRun, error) {
 	var runs []models.WorkflowRun
 
 	query := r.db.WithContext(ctx).
@@ -149,7 +163,7 @@ func (r *WorkflowRunRepository) ListByWorkflowIDWithTenant(ctx context.Context, 
 }
 
 // ListWithTenant retrieves workflow runs with tenant isolation and pagination
-func (r *WorkflowRunRepository) ListWithTenant(ctx context.Context, tenantID, projectID string, offset, limit int) ([]models.WorkflowRun, int64, error) {
+func (r *workflowRunRepository) ListWithTenant(ctx context.Context, tenantID, projectID string, offset, limit int) ([]models.WorkflowRun, int64, error) {
 	var runs []models.WorkflowRun
 	var total int64
 
@@ -176,7 +190,7 @@ func (r *WorkflowRunRepository) ListWithTenant(ctx context.Context, tenantID, pr
 }
 
 // DeleteWithTenant soft deletes a workflow run with tenant isolation
-func (r *WorkflowRunRepository) DeleteWithTenant(ctx context.Context, runID, tenantID, projectID string) error {
+func (r *workflowRunRepository) DeleteWithTenant(ctx context.Context, runID, tenantID, projectID string) error {
 	result := r.db.WithContext(ctx).
 		Where("run_id = ? AND tenant_id = ? AND project_id = ?",
 			runID, tenantID, projectID).
