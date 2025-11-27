@@ -50,6 +50,18 @@ Claude Code的Hooks通过 `.claude/settings.json` 配置，而非独立的shell�
 ```json
 {
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write",
+        "description": "Remind Claude to use write-standard-document skill for docs/ creation",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c '...提醒AI使用skill...'"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Write",
@@ -57,7 +69,7 @@ Claude Code的Hooks通过 `.claude/settings.json` 配置，而非独立的shell�
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'input=$(cat); file_path=$(echo \"$input\" | jq -r \".params.file_path // empty\"); if [[ \"$file_path\" =~ ^docs/[^/]+\\.md$ ]] && [[ \"$file_path\" != \"docs/README.md\" ]] && [[ \"$file_path\" != \"docs/directory-standards.md\" ]]; then echo \"📋 New document detected: $file_path\"; echo \"💡 Tip: Claude can analyze this document to determine if it is temporary or permanent.\"; echo \"💡 Type \\\"analyze this document\\\" to classify it.\"; fi'"
+            "command": "bash -c '...新文档检测...'"
           }
         ]
       },
@@ -67,19 +79,31 @@ Claude Code的Hooks通过 `.claude/settings.json` 配置，而非独立的shell�
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'input=$(cat); file_path=$(echo \"$input\" | jq -r \".params.file_path // empty\"); new_string=$(echo \"$input\" | jq -r \".params.new_string // empty\"); if [[ \"$file_path\" =~ ^docs/[^/]+\\.md$ ]] && [[ \"$new_string\" =~ (状态.*✅.*已完成|Status.*✅.*Complete) ]]; then echo \"✅ Document marked as complete: $file_path\"; echo \"💡 Tip: Run /cleanup-docs archive to archive completed documents.\"; fi'"
+            "command": "bash -c '...完成状态检测...'"
           }
         ]
       }
     ]
   },
   "description": "Document lifecycle management hooks",
-  "version": "1.0"
+  "version": "1.1"
 }
 ```
 
 ### Hook工作原理
 
+**PreToolUse Hook** (AI规范提醒) 🌟 新增:
+1. **触发时机**: 在AI使用Write工具**之前**触发
+2. **检查目标**: 是否要创建`docs/`目录下的`.md`文件
+3. **提醒内容**:
+   ```
+   ⚠️  REMINDER: Creating document in docs/ directory
+   📝 You should use the write-standard-document skill instead of Write tool
+   ✅ This ensures proper templates, metadata, and directory placement
+   ```
+4. **目的**: 强制AI在创建文档时使用标准skill，而非直接Write
+
+**PostToolUse Hook** (用户提示):
 1. **PostToolUse触发**: 当Claude使用Write或Edit工具后触发
 2. **JSON输入解析**: Hook通过stdin接收工具调用的JSON数据
 3. **条件检查**: 使用jq解析文件路径和内容
@@ -91,9 +115,10 @@ Claude Code的Hooks通过 `.claude/settings.json` 配置，而非独立的shell�
 | 特性 | 原设计 | 实际实现 |
 |-----|--------|----------|
 | Hook位置 | `.claude/hooks/*.sh` | `.claude/settings.json` |
-| 触发时机 | 文件系统事件 | Tool使用事件 |
+| 触发时机 | 文件系统事件 | Tool使用事件（Pre+Post） |
 | 配置格式 | Bash脚本 | JSON + 内联命令 |
-| 自动化程度 | 自动触发Skill | 提示用户采取行动 |
+| 自动化程度 | 自动触发Skill | PreToolUse提醒AI + PostToolUse提示用户 |
+| AI规范执行 | 无 | **PreToolUse强制AI使用skill** 🌟 |
 
 ---
 
@@ -189,15 +214,17 @@ version: "1.0"
 ```markdown
 ---
 name: write-standard-document
-description: Help users create new documents following project documentation standards, including proper templates, metadata, naming conventions, and directory placement
+description: MANDATORY - Use this skill whenever creating ANY documentation file (.md) in the docs/ directory. Claude must use this skill for both user-requested documents AND when Claude needs to create documentation files.
 allowed-tools: Read, Write, AskUserQuestion
-version: "1.0"
+version: "1.1"
 ---
 ```
 
 **功能说明**:
 
-帮助用户按照项目标准创建结构良好的文档，包含正确的模板、元数据和目录位置。
+**强制使用**: AI在创建`docs/`目录下的任何文档时**必须**使用此Skill，确保所有文档都符合项目规范。
+
+帮助用户和AI自己按照项目标准创建结构良好的文档，包含正确的模板、元数据和目录位置。
 
 **支持的文档类型**:
 
@@ -231,6 +258,15 @@ version: "1.0"
 **触发方式**:
 - 命令: 用户运行 `/new-doc [type]`
 - 手动: 用户说"创建新文档"或"help me write documentation"
+- **自动**: AI需要创建任何`docs/`目录下的文档时自动使用 🌟
+
+**AI自动使用机制** 🤖:
+
+1. **PreToolUse Hook提醒**: 当AI尝试直接创建docs文件时，hook会提醒使用skill
+2. **Skill Description强制**: Skill描述明确标记为"MANDATORY"
+3. **AI工作指南**: 包含完整的AI自助使用流程说明
+
+这确保所有由AI创建的文档（分析报告、迁移计划等）都自动符合规范！
 
 **示例输出**:
 ```
@@ -616,15 +652,10 @@ graph TD
 ```json
 {
   "hooks": {
+    "PreToolUse": [...]    // 🌟 AI规范提醒
     "PostToolUse": [
-      {
-        "matcher": "Write",
-        "hooks": [...]  // 新文档创建监听
-      },
-      {
-        "matcher": "Edit",
-        "hooks": [...]  // 完成状态监听
-      }
+      { "matcher": "Write" },  // 新文档创建监听
+      { "matcher": "Edit" }    // 完成状态监听
     ]
   }
 }
@@ -634,6 +665,7 @@ graph TD
 - ✅ `analyze-temp-document/SKILL.md` - 文档分类分析
 - ✅ `archive-completed-document/SKILL.md` - 自动归档
 - ✅ `write-standard-document/SKILL.md` ⭐ 新增 - 按标准创建文档
+  - ✅ `AI-WORKFLOW.md` 🤖 AI工作指南（确保AI也遵循规范）
 
 **Slash Commands** - `.claude/commands/`
 - ✅ `cleanup-docs.md` - 文档清理命令（支持check/archive/suggest/status）
@@ -643,17 +675,18 @@ graph TD
 
 ```
 .claude/
-├── settings.json                    # Hooks配置
+├── settings.json                      # Hooks配置（含PreToolUse提醒）
 ├── commands/
-│   ├── cleanup-docs.md             # 文档清理管理
-│   └── new-doc.md                  ⭐ 新增 - 创建标准文档
+│   ├── cleanup-docs.md               # 文档清理管理
+│   └── new-doc.md                    ⭐ 新增 - 创建标准文档
 └── skills/
     ├── analyze-temp-document/
-    │   └── SKILL.md                # 文档分类分析
+    │   └── SKILL.md                  # 文档分类分析
     ├── archive-completed-document/
-    │   └── SKILL.md                # 自动归档
-    └── write-standard-document/    ⭐ 新增
-        └── SKILL.md                # 按标准创建文档
+    │   └── SKILL.md                  # 自动归档
+    └── write-standard-document/      ⭐ 新增
+        ├── SKILL.md                  # 按标准创建文档
+        └── AI-WORKFLOW.md            🤖 AI工作指南
 ```
 
 ### ❌ 未实现（也不需要实现）

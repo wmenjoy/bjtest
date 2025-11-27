@@ -1,21 +1,35 @@
 ---
 name: write-standard-document
-description: Help users create new documents following project documentation standards, including proper templates, metadata, naming conventions, and directory placement
+description: MANDATORY - Use this skill whenever creating ANY documentation file (.md) in the docs/ directory. This ensures all documents follow project standards with proper templates, metadata, naming conventions, and directory placement. Claude must use this skill for both user-requested documents AND when Claude needs to create documentation files.
 allowed-tools: Read, Write, AskUserQuestion
-version: "1.0"
+version: "1.1"
 ---
 
 # Write Standard Document
 
-Guide users through creating well-structured documents that comply with the project's seven-layer documentation architecture and standards defined in `docs/directory-standards.md`.
+**CRITICAL**: This skill is MANDATORY for all document creation in `docs/`. Claude must use this skill whether the user requests a document or Claude needs to create one during task execution.
+
+Guide users (and Claude itself) through creating well-structured documents that comply with the project's seven-layer documentation architecture and standards defined in `docs/directory-standards.md`.
 
 ## When to Use This Skill
 
-Claude should invoke this skill when:
+Claude **MUST** invoke this skill when:
+
+### User-Initiated Creation
 - User says "create a new document" or "write a new doc"
 - User asks "how should I document..."
 - User wants to add documentation but is unsure of the format
 - User explicitly requests help with documentation standards
+- User runs `/new-doc` command
+
+### Claude-Initiated Creation (IMPORTANT)
+- **Claude needs to create ANY .md file in `docs/` directory**
+- Claude is documenting work performed (e.g., migration analysis, refactoring plan)
+- Claude creates analysis reports, investigation summaries, or implementation plans
+- Claude writes technical specifications, API docs, or guides
+- Claude creates temporary documents for tracking tasks
+
+**Rule**: NEVER use Write tool directly for `docs/*.md` files. ALWAYS use this skill instead.
 
 ## Task Overview
 

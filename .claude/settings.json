@@ -1,5 +1,17 @@
 {
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write",
+        "description": "Remind Claude to use write-standard-document skill for docs/ creation",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'input=$(cat); file_path=$(echo \"$input\" | jq -r \".params.file_path // empty\"); if [[ \"$file_path\" =~ ^docs/.*\\.md$ ]] && [[ \"$file_path\" != \"docs/README.md\" ]] && [[ \"$file_path\" != \"docs/directory-standards.md\" ]]; then echo \"\"; echo \"⚠️  REMINDER: Creating document in docs/ directory\"; echo \"📝 You should use the write-standard-document skill instead of Write tool\"; echo \"✅ This ensures proper templates, metadata, and directory placement\"; echo \"\"; echo \"If you have already invoked the skill and it is calling Write, proceed.\"; echo \"If not, cancel and invoke write-standard-document skill first.\"; echo \"\"; fi'"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Write",
