@@ -24,19 +24,19 @@ type TestResultRepository interface {
 	FindByRunIDWithTenant(ctx context.Context, runID, tenantID, projectID string) ([]models.TestResult, error)
 }
 
-type testResultRepo struct {
+type testResultRepository struct {
 	db *gorm.DB
 }
 
 func NewTestResultRepository(db *gorm.DB) TestResultRepository {
-	return &testResultRepo{db: db}
+	return &testResultRepository{db: db}
 }
 
-func (r *testResultRepo) Create(result *models.TestResult) error {
+func (r *testResultRepository) Create(result *models.TestResult) error {
 	return r.db.Create(result).Error
 }
 
-func (r *testResultRepo) FindByID(id uint) (*models.TestResult, error) {
+func (r *testResultRepository) FindByID(id uint) (*models.TestResult, error) {
 	var result models.TestResult
 	err := r.db.First(&result, id).Error
 	if err != nil {
@@ -45,7 +45,7 @@ func (r *testResultRepo) FindByID(id uint) (*models.TestResult, error) {
 	return &result, nil
 }
 
-func (r *testResultRepo) FindByTestID(testID string, limit int) ([]models.TestResult, error) {
+func (r *testResultRepository) FindByTestID(testID string, limit int) ([]models.TestResult, error) {
 	var results []models.TestResult
 	query := r.db.Where("test_id = ?", testID).Order("created_at DESC")
 	if limit > 0 {
@@ -55,13 +55,13 @@ func (r *testResultRepo) FindByTestID(testID string, limit int) ([]models.TestRe
 	return results, err
 }
 
-func (r *testResultRepo) FindByRunID(runID string) ([]models.TestResult, error) {
+func (r *testResultRepository) FindByRunID(runID string) ([]models.TestResult, error) {
 	var results []models.TestResult
 	err := r.db.Where("run_id = ?", runID).Find(&results).Error
 	return results, err
 }
 
-func (r *testResultRepo) DeleteOlderThan(days int) error {
+func (r *testResultRepository) DeleteOlderThan(days int) error {
 	cutoff := time.Now().AddDate(0, 0, -days)
 	return r.db.Where("created_at < ?", cutoff).Delete(&models.TestResult{}).Error
 }
@@ -81,23 +81,23 @@ type TestRunRepository interface {
 	FindAllWithTenant(ctx context.Context, tenantID, projectID string, limit, offset int) ([]models.TestRun, int64, error)
 }
 
-type testRunRepo struct {
+type testRunRepository struct {
 	db *gorm.DB
 }
 
 func NewTestRunRepository(db *gorm.DB) TestRunRepository {
-	return &testRunRepo{db: db}
+	return &testRunRepository{db: db}
 }
 
-func (r *testRunRepo) Create(run *models.TestRun) error {
+func (r *testRunRepository) Create(run *models.TestRun) error {
 	return r.db.Create(run).Error
 }
 
-func (r *testRunRepo) Update(run *models.TestRun) error {
+func (r *testRunRepository) Update(run *models.TestRun) error {
 	return r.db.Save(run).Error
 }
 
-func (r *testRunRepo) FindByID(runID string) (*models.TestRun, error) {
+func (r *testRunRepository) FindByID(runID string) (*models.TestRun, error) {
 	var run models.TestRun
 	err := r.db.Preload("Results").Where("run_id = ?", runID).First(&run).Error
 	if err != nil {
@@ -106,7 +106,7 @@ func (r *testRunRepo) FindByID(runID string) (*models.TestRun, error) {
 	return &run, nil
 }
 
-func (r *testRunRepo) FindAll(limit, offset int) ([]models.TestRun, int64, error) {
+func (r *testRunRepository) FindAll(limit, offset int) ([]models.TestRun, int64, error) {
 	var runs []models.TestRun
 	var total int64
 
@@ -119,7 +119,7 @@ func (r *testRunRepo) FindAll(limit, offset int) ([]models.TestRun, int64, error
 }
 
 // CreateWithTenant creates a new test result with tenant validation (TestResultRepository)
-func (r *testResultRepo) CreateWithTenant(ctx context.Context, result *models.TestResult) error {
+func (r *testResultRepository) CreateWithTenant(ctx context.Context, result *models.TestResult) error {
 	// Validate tenant and project are set
 	if result.TenantID == "" {
 		return fmt.Errorf("tenant_id is required")
@@ -136,7 +136,7 @@ func (r *testResultRepo) CreateWithTenant(ctx context.Context, result *models.Te
 }
 
 // FindByTestIDWithTenant retrieves test results by test ID with tenant isolation
-func (r *testResultRepo) FindByTestIDWithTenant(ctx context.Context, testID, tenantID, projectID string, limit int) ([]models.TestResult, error) {
+func (r *testResultRepository) FindByTestIDWithTenant(ctx context.Context, testID, tenantID, projectID string, limit int) ([]models.TestResult, error) {
 	var results []models.TestResult
 
 	query := r.db.WithContext(ctx).
@@ -156,7 +156,7 @@ func (r *testResultRepo) FindByTestIDWithTenant(ctx context.Context, testID, ten
 }
 
 // FindByRunIDWithTenant retrieves test results by run ID with tenant isolation
-func (r *testResultRepo) FindByRunIDWithTenant(ctx context.Context, runID, tenantID, projectID string) ([]models.TestResult, error) {
+func (r *testResultRepository) FindByRunIDWithTenant(ctx context.Context, runID, tenantID, projectID string) ([]models.TestResult, error) {
 	var results []models.TestResult
 
 	err := r.db.WithContext(ctx).
@@ -172,7 +172,7 @@ func (r *testResultRepo) FindByRunIDWithTenant(ctx context.Context, runID, tenan
 }
 
 // CreateTestRunWithTenant creates a new test run with tenant validation
-func (r *testRunRepo) CreateWithTenant(ctx context.Context, run *models.TestRun) error {
+func (r *testRunRepository) CreateWithTenant(ctx context.Context, run *models.TestRun) error {
 	// Validate tenant and project are set
 	if run.TenantID == "" {
 		return fmt.Errorf("tenant_id is required")
@@ -189,7 +189,7 @@ func (r *testRunRepo) CreateWithTenant(ctx context.Context, run *models.TestRun)
 }
 
 // UpdateTestRunWithTenant updates a test run with tenant isolation
-func (r *testRunRepo) UpdateWithTenant(ctx context.Context, run *models.TestRun) error {
+func (r *testRunRepository) UpdateWithTenant(ctx context.Context, run *models.TestRun) error {
 	// Validate tenant and project match
 	if run.TenantID == "" || run.ProjectID == "" {
 		return fmt.Errorf("tenant_id and project_id are required")
@@ -213,7 +213,7 @@ func (r *testRunRepo) UpdateWithTenant(ctx context.Context, run *models.TestRun)
 }
 
 // FindByIDWithTenant retrieves a test run with tenant isolation
-func (r *testRunRepo) FindByIDWithTenant(ctx context.Context, runID, tenantID, projectID string) (*models.TestRun, error) {
+func (r *testRunRepository) FindByIDWithTenant(ctx context.Context, runID, tenantID, projectID string) (*models.TestRun, error) {
 	var run models.TestRun
 
 	err := r.db.WithContext(ctx).
@@ -233,7 +233,7 @@ func (r *testRunRepo) FindByIDWithTenant(ctx context.Context, runID, tenantID, p
 }
 
 // FindAllWithTenant retrieves all test runs with tenant isolation and pagination
-func (r *testRunRepo) FindAllWithTenant(ctx context.Context, tenantID, projectID string, limit, offset int) ([]models.TestRun, int64, error) {
+func (r *testRunRepository) FindAllWithTenant(ctx context.Context, tenantID, projectID string, limit, offset int) ([]models.TestRun, int64, error) {
 	var runs []models.TestRun
 	var total int64
 
