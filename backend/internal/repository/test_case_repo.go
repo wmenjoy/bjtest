@@ -35,29 +35,29 @@ type TestCaseRepository interface {
 	SearchWithTenant(ctx context.Context, tenantID, projectID, query string) ([]models.TestCase, error)
 }
 
-// testCaseRepo 实现
-type testCaseRepo struct {
+// testCaseRepository 实现
+type testCaseRepository struct {
 	db *gorm.DB
 }
 
 // NewTestCaseRepository 创建Repository实例
 func NewTestCaseRepository(db *gorm.DB) TestCaseRepository {
-	return &testCaseRepo{db: db}
+	return &testCaseRepository{db: db}
 }
 
-func (r *testCaseRepo) Create(testCase *models.TestCase) error {
+func (r *testCaseRepository) Create(testCase *models.TestCase) error {
 	return r.db.Create(testCase).Error
 }
 
-func (r *testCaseRepo) Update(testCase *models.TestCase) error {
+func (r *testCaseRepository) Update(testCase *models.TestCase) error {
 	return r.db.Save(testCase).Error
 }
 
-func (r *testCaseRepo) Delete(testID string) error {
+func (r *testCaseRepository) Delete(testID string) error {
 	return r.db.Where("test_id = ?", testID).Delete(&models.TestCase{}).Error
 }
 
-func (r *testCaseRepo) FindByID(testID string) (*models.TestCase, error) {
+func (r *testCaseRepository) FindByID(testID string) (*models.TestCase, error) {
 	var testCase models.TestCase
 	err := r.db.Where("test_id = ?", testID).First(&testCase).Error
 	if err != nil {
@@ -70,17 +70,17 @@ func (r *testCaseRepo) FindByID(testID string) (*models.TestCase, error) {
 }
 
 // GetTestCase is an alias for FindByID for compatibility with testcase package
-func (r *testCaseRepo) GetTestCase(testID string) (*models.TestCase, error) {
+func (r *testCaseRepository) GetTestCase(testID string) (*models.TestCase, error) {
 	return r.FindByID(testID)
 }
 
-func (r *testCaseRepo) FindByGroupID(groupID string) ([]models.TestCase, error) {
+func (r *testCaseRepository) FindByGroupID(groupID string) ([]models.TestCase, error) {
 	var testCases []models.TestCase
 	err := r.db.Where("group_id = ?", groupID).Find(&testCases).Error
 	return testCases, err
 }
 
-func (r *testCaseRepo) FindAll(limit, offset int) ([]models.TestCase, int64, error) {
+func (r *testCaseRepository) FindAll(limit, offset int) ([]models.TestCase, int64, error) {
 	var testCases []models.TestCase
 	var total int64
 
@@ -92,13 +92,13 @@ func (r *testCaseRepo) FindAll(limit, offset int) ([]models.TestCase, int64, err
 	return testCases, total, err
 }
 
-func (r *testCaseRepo) FindByType(testType string) ([]models.TestCase, error) {
+func (r *testCaseRepository) FindByType(testType string) ([]models.TestCase, error) {
 	var testCases []models.TestCase
 	err := r.db.Where("type = ?", testType).Find(&testCases).Error
 	return testCases, err
 }
 
-func (r *testCaseRepo) FindByTags(tags []string) ([]models.TestCase, error) {
+func (r *testCaseRepository) FindByTags(tags []string) ([]models.TestCase, error) {
 	var testCases []models.TestCase
 	// 简化实现：这里需要JSON查询，SQLite支持有限
 	// 生产环境建议使用PostgreSQL的JSONB查询
@@ -117,7 +117,7 @@ func (r *testCaseRepo) FindByTags(tags []string) ([]models.TestCase, error) {
 	return filtered, nil
 }
 
-func (r *testCaseRepo) Search(query string) ([]models.TestCase, error) {
+func (r *testCaseRepository) Search(query string) ([]models.TestCase, error) {
 	var testCases []models.TestCase
 	err := r.db.Where("name LIKE ? OR objective LIKE ?", "%"+query+"%", "%"+query+"%").
 		Find(&testCases).Error
@@ -137,7 +137,7 @@ func containsAny(slice []interface{}, items []string) bool {
 }
 
 // CreateWithTenant creates a new test case with tenant validation
-func (r *testCaseRepo) CreateWithTenant(ctx context.Context, testCase *models.TestCase) error {
+func (r *testCaseRepository) CreateWithTenant(ctx context.Context, testCase *models.TestCase) error {
 	// Validate tenant and project are set
 	if testCase.TenantID == "" {
 		return fmt.Errorf("tenant_id is required")
@@ -154,7 +154,7 @@ func (r *testCaseRepo) CreateWithTenant(ctx context.Context, testCase *models.Te
 }
 
 // UpdateWithTenant updates a test case with tenant isolation
-func (r *testCaseRepo) UpdateWithTenant(ctx context.Context, testCase *models.TestCase) error {
+func (r *testCaseRepository) UpdateWithTenant(ctx context.Context, testCase *models.TestCase) error {
 	// Validate tenant and project match
 	if testCase.TenantID == "" || testCase.ProjectID == "" {
 		return fmt.Errorf("tenant_id and project_id are required")
@@ -178,7 +178,7 @@ func (r *testCaseRepo) UpdateWithTenant(ctx context.Context, testCase *models.Te
 }
 
 // DeleteWithTenant soft deletes a test case with tenant isolation
-func (r *testCaseRepo) DeleteWithTenant(ctx context.Context, testID, tenantID, projectID string) error {
+func (r *testCaseRepository) DeleteWithTenant(ctx context.Context, testID, tenantID, projectID string) error {
 	result := r.db.WithContext(ctx).
 		Where("test_id = ? AND tenant_id = ? AND project_id = ?",
 			testID, tenantID, projectID).
@@ -196,7 +196,7 @@ func (r *testCaseRepo) DeleteWithTenant(ctx context.Context, testID, tenantID, p
 }
 
 // FindByIDWithTenant retrieves a test case with tenant isolation
-func (r *testCaseRepo) FindByIDWithTenant(ctx context.Context, testID, tenantID, projectID string) (*models.TestCase, error) {
+func (r *testCaseRepository) FindByIDWithTenant(ctx context.Context, testID, tenantID, projectID string) (*models.TestCase, error) {
 	var testCase models.TestCase
 
 	result := r.db.WithContext(ctx).
@@ -215,7 +215,7 @@ func (r *testCaseRepo) FindByIDWithTenant(ctx context.Context, testID, tenantID,
 }
 
 // FindByGroupIDWithTenant retrieves test cases by group ID with tenant isolation
-func (r *testCaseRepo) FindByGroupIDWithTenant(ctx context.Context, groupID, tenantID, projectID string) ([]models.TestCase, error) {
+func (r *testCaseRepository) FindByGroupIDWithTenant(ctx context.Context, groupID, tenantID, projectID string) ([]models.TestCase, error) {
 	var testCases []models.TestCase
 
 	result := r.db.WithContext(ctx).
@@ -231,7 +231,7 @@ func (r *testCaseRepo) FindByGroupIDWithTenant(ctx context.Context, groupID, ten
 }
 
 // FindAllWithTenant retrieves all test cases with tenant isolation and pagination
-func (r *testCaseRepo) FindAllWithTenant(ctx context.Context, tenantID, projectID string, limit, offset int) ([]models.TestCase, int64, error) {
+func (r *testCaseRepository) FindAllWithTenant(ctx context.Context, tenantID, projectID string, limit, offset int) ([]models.TestCase, int64, error) {
 	var testCases []models.TestCase
 	var total int64
 
@@ -258,7 +258,7 @@ func (r *testCaseRepo) FindAllWithTenant(ctx context.Context, tenantID, projectI
 }
 
 // FindByTypeWithTenant retrieves test cases by type with tenant isolation
-func (r *testCaseRepo) FindByTypeWithTenant(ctx context.Context, testType, tenantID, projectID string) ([]models.TestCase, error) {
+func (r *testCaseRepository) FindByTypeWithTenant(ctx context.Context, testType, tenantID, projectID string) ([]models.TestCase, error) {
 	var testCases []models.TestCase
 
 	result := r.db.WithContext(ctx).
@@ -274,7 +274,7 @@ func (r *testCaseRepo) FindByTypeWithTenant(ctx context.Context, testType, tenan
 }
 
 // SearchWithTenant searches test cases with tenant isolation
-func (r *testCaseRepo) SearchWithTenant(ctx context.Context, query, tenantID, projectID string) ([]models.TestCase, error) {
+func (r *testCaseRepository) SearchWithTenant(ctx context.Context, query, tenantID, projectID string) ([]models.TestCase, error) {
 	var testCases []models.TestCase
 
 	result := r.db.WithContext(ctx).
