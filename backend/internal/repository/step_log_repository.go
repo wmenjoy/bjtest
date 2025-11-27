@@ -7,18 +7,29 @@ import (
 	"gorm.io/gorm"
 )
 
-// StepLogRepository handles step log data access
-type StepLogRepository struct {
+// StepLogRepository defines the interface for step log data access
+type StepLogRepository interface {
+	Create(log *models.WorkflowStepLog) error
+	ListByRunID(runID string, level *string) ([]models.WorkflowStepLog, error)
+	ListByStepID(runID, stepID string) ([]models.WorkflowStepLog, error)
+	CreateWithTenant(ctx context.Context, log *models.WorkflowStepLog) error
+	ListByRunIDWithTenant(ctx context.Context, runID, tenantID, projectID string, level *string) ([]models.WorkflowStepLog, error)
+	ListByStepIDWithTenant(ctx context.Context, runID, stepID, tenantID, projectID string) ([]models.WorkflowStepLog, error)
+	DeleteByRunIDWithTenant(ctx context.Context, runID, tenantID, projectID string) error
+}
+
+// stepLogRepository handles step log data access
+type stepLogRepository struct {
 	db *gorm.DB
 }
 
 // NewStepLogRepository creates a new repository
-func NewStepLogRepository(db *gorm.DB) *StepLogRepository {
-	return &StepLogRepository{db: db}
+func NewStepLogRepository(db *gorm.DB) StepLogRepository {
+	return &stepLogRepository{db: db}
 }
 
 // Create creates a new step log entry
-func (r *StepLogRepository) Create(log *models.WorkflowStepLog) error {
+func (r *stepLogRepository) Create(log *models.WorkflowStepLog) error {
 	result := r.db.Create(log)
 	if result.Error != nil {
 		return fmt.Errorf("failed to create step log: %w", result.Error)
@@ -27,7 +38,7 @@ func (r *StepLogRepository) Create(log *models.WorkflowStepLog) error {
 }
 
 // ListByRunID retrieves all logs for a run
-func (r *StepLogRepository) ListByRunID(runID string, level *string) ([]models.WorkflowStepLog, error) {
+func (r *stepLogRepository) ListByRunID(runID string, level *string) ([]models.WorkflowStepLog, error) {
 	var logs []models.WorkflowStepLog
 
 	query := r.db.Where("run_id = ?", runID)
@@ -44,7 +55,7 @@ func (r *StepLogRepository) ListByRunID(runID string, level *string) ([]models.W
 }
 
 // ListByStepID retrieves all logs for a specific step
-func (r *StepLogRepository) ListByStepID(runID, stepID string) ([]models.WorkflowStepLog, error) {
+func (r *stepLogRepository) ListByStepID(runID, stepID string) ([]models.WorkflowStepLog, error) {
 	var logs []models.WorkflowStepLog
 
 	result := r.db.Where("run_id = ? AND step_id = ?", runID, stepID).
@@ -60,7 +71,7 @@ func (r *StepLogRepository) ListByStepID(runID, stepID string) ([]models.Workflo
 
 // CreateWithTenant creates a new step log entry with context
 // Note: Tenant isolation is enforced at WorkflowRun level, not on child records
-func (r *StepLogRepository) CreateWithTenant(ctx context.Context, log *models.WorkflowStepLog) error {
+func (r *stepLogRepository) CreateWithTenant(ctx context.Context, log *models.WorkflowStepLog) error {
 	result := r.db.WithContext(ctx).Create(log)
 	if result.Error != nil {
 		return fmt.Errorf("failed to create step log: %w", result.Error)
@@ -70,7 +81,7 @@ func (r *StepLogRepository) CreateWithTenant(ctx context.Context, log *models.Wo
 
 // ListByRunIDWithTenant retrieves all logs for a run with tenant isolation
 // Tenant isolation is enforced by accessing WorkflowRun with tenant checks first
-func (r *StepLogRepository) ListByRunIDWithTenant(ctx context.Context, runID, tenantID, projectID string, level *string) ([]models.WorkflowStepLog, error) {
+func (r *stepLogRepository) ListByRunIDWithTenant(ctx context.Context, runID, tenantID, projectID string, level *string) ([]models.WorkflowStepLog, error) {
 	var logs []models.WorkflowStepLog
 
 	// Simply query by runID - tenant isolation is enforced at WorkflowRun level
@@ -91,7 +102,7 @@ func (r *StepLogRepository) ListByRunIDWithTenant(ctx context.Context, runID, te
 
 // ListByStepIDWithTenant retrieves all logs for a specific step with tenant isolation
 // Tenant isolation is enforced by accessing WorkflowRun with tenant checks first
-func (r *StepLogRepository) ListByStepIDWithTenant(ctx context.Context, runID, stepID, tenantID, projectID string) ([]models.WorkflowStepLog, error) {
+func (r *stepLogRepository) ListByStepIDWithTenant(ctx context.Context, runID, stepID, tenantID, projectID string) ([]models.WorkflowStepLog, error) {
 	var logs []models.WorkflowStepLog
 
 	// Simply query by runID and stepID - tenant isolation is enforced at WorkflowRun level
@@ -109,7 +120,7 @@ func (r *StepLogRepository) ListByStepIDWithTenant(ctx context.Context, runID, s
 
 // DeleteByRunIDWithTenant deletes all logs for a run with tenant isolation
 // Tenant isolation is enforced by accessing WorkflowRun with tenant checks first
-func (r *StepLogRepository) DeleteByRunIDWithTenant(ctx context.Context, runID, tenantID, projectID string) error {
+func (r *stepLogRepository) DeleteByRunIDWithTenant(ctx context.Context, runID, tenantID, projectID string) error {
 	result := r.db.WithContext(ctx).
 		Where("run_id = ?", runID).
 		Delete(&models.WorkflowStepLog{})
