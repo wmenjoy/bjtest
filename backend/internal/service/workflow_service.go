@@ -30,7 +30,7 @@ type WorkflowService interface {
 type workflowService struct {
 	workflowRepo    *repository.WorkflowRepository
 	workflowRunRepo *repository.WorkflowRunRepository
-	stepExecRepo    *repository.StepExecutionRepository
+	stepExecRepo    repository.StepExecutionRepository
 	stepLogRepo     *repository.StepLogRepository
 	testCaseRepo    *repository.WorkflowTestCaseRepository
 	executor        *workflow.WorkflowExecutorImpl
@@ -40,7 +40,7 @@ type workflowService struct {
 func NewWorkflowService(
 	workflowRepo *repository.WorkflowRepository,
 	workflowRunRepo *repository.WorkflowRunRepository,
-	stepExecRepo *repository.StepExecutionRepository,
+	stepExecRepo repository.StepExecutionRepository,
 	stepLogRepo *repository.StepLogRepository,
 	testCaseRepo *repository.WorkflowTestCaseRepository,
 	executor *workflow.WorkflowExecutorImpl,
