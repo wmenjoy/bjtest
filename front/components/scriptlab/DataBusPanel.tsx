@@ -4,7 +4,7 @@ import { WorkflowNode } from '../../types';
 import { Layers } from 'lucide-react';
 import { useConfig } from '../../ConfigContext';
 import { NODE_SPECS, DEFAULT_NODE_SPEC } from './constants';
-import { TreeItem } from './widgets';
+import { TreeItem } from './Widgets';
 
 interface DataBusPanelProps {
     workflowNodes: WorkflowNode[];

@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { WorkflowNode, NodeConfig } from '../../types';
 import { X, Save, ArrowDownToLine } from 'lucide-react';
 import { NODE_SPECS, DEFAULT_NODE_SPEC } from './constants';
-import { SmartField, KVEditor } from './widgets';
+import { SmartField, KVEditor } from './Widgets';
 import { useConfig } from '../../ConfigContext';
 
 interface NodeConfigPanelProps {
