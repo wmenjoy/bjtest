@@ -13,19 +13,19 @@ type UserService interface {
 	// Add other user-related methods as needed
 }
 
-// userServiceImpl implements UserService
-type userServiceImpl struct {
+// userService implements UserService
+type userService struct {
 	roleRepo repository.RoleRepository
 }
 
 // NewUserService creates a new user service
 func NewUserService(roleRepo repository.RoleRepository) UserService {
-	return &userServiceImpl{
+	return &userService{
 		roleRepo: roleRepo,
 	}
 }
 
 // ListRoles retrieves all active roles from the repository
-func (s *userServiceImpl) ListRoles(ctx context.Context) ([]*models.Role, error) {
+func (s *userService) ListRoles(ctx context.Context) ([]*models.Role, error) {
 	return s.roleRepo.GetAll(ctx)
 }
