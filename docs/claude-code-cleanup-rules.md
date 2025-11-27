@@ -181,6 +181,73 @@ version: "1.0"
 
 ---
 
+### 2.3 Skill: write-standard-document ⭐ 新增
+
+**.claude/skills/write-standard-document/SKILL.md**
+
+**Frontmatter**:
+```markdown
+---
+name: write-standard-document
+description: Help users create new documents following project documentation standards, including proper templates, metadata, naming conventions, and directory placement
+allowed-tools: Read, Write, AskUserQuestion
+version: "1.0"
+---
+```
+
+**功能说明**:
+
+帮助用户按照项目标准创建结构良好的文档，包含正确的模板、元数据和目录位置。
+
+**支持的文档类型**:
+
+| 类型 | 层级 | 模板包含 |
+|-----|------|---------|
+| 技术规范 | 1-specs | API文档、数据库schema、技术架构 |
+| 产品需求 | 2-requirements | PRD、用户故事、设计文档 |
+| 使用指南 | 3-guides | 用户指南、开发指南、教程 |
+| 计划文档 | 4-planning | 路线图、待办事项、Sprint计划 |
+| 业务知识库 | 5-wiki | 业务逻辑、领域知识、运作机制 |
+| 架构决策 | 6-decisions | ADR (Architecture Decision Records) |
+| 临时文档 | docs/根目录 | 分析报告、迁移计划、TODO |
+
+**工作流程**:
+1. 理解用户意图（要文档化什么）
+2. 确定文档类型和层级
+3. 询问必要的细节信息
+4. 选择并填充相应模板
+5. 建议文件名和目录位置
+6. 创建文档并添加完整元数据
+7. 提供后续填写指导
+
+**内置模板**:
+- ✅ 技术规范模板（包含API、架构、测试等章节）
+- ✅ PRD模板（包含需求背景、功能描述、验收标准）
+- ✅ 用户指南模板（包含步骤、故障排除、最佳实践）
+- ✅ ADR模板（包含背景、决策、方案对比、影响分析）
+- ✅ Wiki模板（包含业务背景、核心概念、运作机制）
+- ✅ 临时文档模板（包含状态跟踪、完成标准）
+
+**触发方式**:
+- 命令: 用户运行 `/new-doc [type]`
+- 手动: 用户说"创建新文档"或"help me write documentation"
+
+**示例输出**:
+```
+✅ Document Created Successfully!
+
+📄 File: docs/1-specs/api/authentication.md
+📁 Layer: Technical Specs (1-specs)
+📋 Type: API Specification
+
+Next steps:
+1. Fill in API endpoints (Section 3)
+2. Add authentication flows (Section 4)
+3. Define error codes (Section 6)
+```
+
+---
+
 ### 与原设计的差异
 
 | 特性 | 原设计 | 实际实现 |
@@ -341,6 +408,94 @@ argument-hint: [check|archive|suggest|status]
   • 运行 /cleanup-docs suggest 获取详细建议
 ```
 
+---
+
+### 4.2 /new-doc 命令 ⭐ 新增
+
+**.claude/commands/new-doc.md**
+
+**Frontmatter**:
+```markdown
+---
+description: Create a new document following project standards with proper templates, metadata, and directory placement
+allowed-tools: Read, Write, AskUserQuestion, Skill
+argument-hint: [type]
+---
+```
+
+**功能说明**:
+
+交互式创建符合项目规范的文档，自动应用正确的模板、元数据和目录结构。
+
+**支持的文档类型参数**:
+
+| 参数 | 说明 | 示例 |
+|-----|------|------|
+| `spec` | 技术规范 | `/new-doc spec` |
+| `prd` | 产品需求文档 | `/new-doc prd` |
+| `story` | 用户故事 | `/new-doc story` |
+| `guide` | 使用指南 | `/new-doc guide` |
+| `plan` | 计划文档 | `/new-doc plan` |
+| `wiki` | 业务知识库 | `/new-doc wiki` |
+| `adr` | 架构决策记录 | `/new-doc adr` |
+| `temp` | 临时分析 | `/new-doc temp` |
+| _(无参数)_ | 交互式向导 | `/new-doc` |
+
+**工作流程**:
+
+**模式1 - 指定类型**:
+1. 用户运行 `/new-doc spec`
+2. 确认文档类型
+3. 询问必要信息（组件名、用途等）
+4. 调用 `write-standard-document` skill
+5. 生成文档并提供后续指导
+
+**模式2 - 交互式**:
+1. 用户运行 `/new-doc`
+2. 询问"你想要文档化什么？"
+3. 分析关键词判断类型
+4. 确认理解是否正确
+5. 调用 skill 创建文档
+
+**输出示例**:
+```
+📝 Document Creation Wizard
+
+What would you like to document?
+
+[用户输入: "Authentication API"]
+
+Based on your description, this sounds like a technical specification.
+
+Creating API specification...
+
+Suggested location: docs/1-specs/api/authentication.md
+
+This document will include:
+- API endpoints
+- Request/response formats
+- Authentication flows
+- Error codes
+
+Should I create this document? (y/n)
+
+[用户确认: y]
+
+✅ Created: docs/1-specs/api/authentication.md
+
+Next steps:
+1. Fill in API endpoints (Section 3)
+2. Add authentication flow diagrams (Section 4)
+3. Define error codes (Section 6)
+```
+
+**集成**:
+- 调用 `write-standard-document` skill 完成实际创建
+- 创建后，`analyze-temp-document` 可以分类临时文档
+- 完成后，`archive-completed-document` 可以归档
+
+---
+
 ### 与原设计的差异
 
 | 特性 | 原设计 | 实际实现 |
@@ -478,9 +633,11 @@ graph TD
 **Skills创建** - `.claude/skills/`
 - ✅ `analyze-temp-document/SKILL.md` - 文档分类分析
 - ✅ `archive-completed-document/SKILL.md` - 自动归档
+- ✅ `write-standard-document/SKILL.md` ⭐ 新增 - 按标准创建文档
 
 **Slash Commands** - `.claude/commands/`
 - ✅ `cleanup-docs.md` - 文档清理命令（支持check/archive/suggest/status）
+- ✅ `new-doc.md` ⭐ 新增 - 创建标准文档向导
 
 ### 文件结构
 
@@ -488,12 +645,15 @@ graph TD
 .claude/
 ├── settings.json                    # Hooks配置
 ├── commands/
-│   └── cleanup-docs.md
+│   ├── cleanup-docs.md             # 文档清理管理
+│   └── new-doc.md                  ⭐ 新增 - 创建标准文档
 └── skills/
     ├── analyze-temp-document/
-    │   └── SKILL.md
-    └── archive-completed-document/
-        └── SKILL.md
+    │   └── SKILL.md                # 文档分类分析
+    ├── archive-completed-document/
+    │   └── SKILL.md                # 自动归档
+    └── write-standard-document/    ⭐ 新增
+        └── SKILL.md                # 按标准创建文档
 ```
 
 ### ❌ 未实现（也不需要实现）
@@ -519,6 +679,54 @@ graph TD
 ## 8. 使用指南
 
 ### 对于用户
+
+**0. 按标准创建新文档 ⭐ 新增**:
+
+使用 `/new-doc` 命令创建符合规范的文档：
+
+```bash
+# 方式1: 指定文档类型
+/new-doc spec       # 创建技术规范
+/new-doc prd        # 创建产品需求文档
+/new-doc guide      # 创建使用指南
+/new-doc wiki       # 创建业务知识库
+/new-doc adr        # 创建架构决策记录
+
+# 方式2: 交互式向导（推荐新手）
+/new-doc            # 回答问题，自动选择类型和模板
+```
+
+**自动完成的事情**:
+- ✅ 选择正确的文档模板
+- ✅ 添加完整的元数据（版本、日期、维护者）
+- ✅ 建议正确的文件名和目录位置
+- ✅ 遵循命名规范（小写+连字符）
+- ✅ 包含所有必要章节的占位符
+
+**示例交互**:
+```
+你: /new-doc spec
+
+我: 你想创建技术规范。你要文档化什么组件或系统？
+
+你: 认证API
+
+我: 建议创建: docs/1-specs/api/authentication.md
+
+包含章节:
+- API endpoints
+- 认证流程
+- 安全要求
+- 错误处理
+
+是否创建？(y/n)
+
+你: y
+
+我: ✅ 已创建！请填写第3节的API端点详情。
+```
+
+---
 
 **1. 创建新文档时**:
 - 在docs/根目录创建新.md文件后，会看到提示
