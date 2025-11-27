@@ -122,7 +122,8 @@ func main() {
 	envHandler := handler.NewEnvironmentHandler(envService)
 	workflowHandler := handler.NewWorkflowHandler(workflowService)
 	wsHandler := handler.NewWebSocketHandler(hub)
-	userHandler := handler.NewUserHandler(roleRepo)
+	userService := service.NewUserService(roleRepo)
+	userHandler := handler.NewUserHandler(userService)
 	actionTemplateHandler := handler.NewActionTemplateHandler(actionTemplateService)
 
 	// Setup Gin router

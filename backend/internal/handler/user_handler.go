@@ -5,18 +5,18 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"test-management-service/internal/models"
-	"test-management-service/internal/repository"
+	"test-management-service/internal/service"
 )
 
 // UserHandler handles user-related requests
 type UserHandler struct {
-	roleRepo repository.RoleRepository
+	userService service.UserService
 }
 
 // NewUserHandler creates a new user handler
-func NewUserHandler(roleRepo repository.RoleRepository) *UserHandler {
+func NewUserHandler(userService service.UserService) *UserHandler {
 	return &UserHandler{
-		roleRepo: roleRepo,
+		userService: userService,
 	}
 }
 
@@ -68,7 +68,7 @@ func (h *UserHandler) GetCurrentUser(c *gin.Context) {
 
 // ListRoles returns all roles from database
 func (h *UserHandler) ListRoles(c *gin.Context) {
-	roles, err := h.roleRepo.GetAll(c.Request.Context())
+	roles, err := h.userService.ListRoles(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to fetch roles from database",
