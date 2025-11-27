@@ -709,7 +709,8 @@ export type StepType =
   | 'loop'       // 循环控制
   | 'branch'     // 条件分支
   | 'merge'      // 合并节点
-  | 'group';     // 步骤组
+  | 'group'      // 步骤组
+  | 'parallel';  // 并行容器（用于显式并行执行多个子步骤）
 
 /**
  * Unified Workflow Step

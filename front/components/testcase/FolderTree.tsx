@@ -31,8 +31,55 @@ const FolderItem: React.FC<{
     allFolders: TestFolder[];
     cases: TestCase[];
 }> = ({ folder, selectedFolderId, selectedCaseId, onSelect, onSelectCase, onEditCase, level, childrenFolders, allFolders, cases }) => {
-    const [isExpanded, setIsExpanded] = useState(true);
+    // Helper function to check if this folder is an ancestor of the selected folder
+    const isAncestorOfSelected = (folderId: string, targetId: string): boolean => {
+        if (folderId === targetId) return true;
+
+        const findPath = (currentId: string): boolean => {
+            if (currentId === folderId) return true;
+            const currentFolder = allFolders.find(f => f.id === currentId);
+            if (!currentFolder || currentFolder.parentId === 'root') return false;
+            return findPath(currentFolder.parentId);
+        };
+
+        return findPath(targetId);
+    };
+
+    // Helper function to check if this folder contains the selected test case
+    const containsSelectedCase = (): boolean => {
+        if (!selectedCaseId) return false;
+
+        const selectedCase = cases.find(c => c.id === selectedCaseId);
+        if (!selectedCase) return false;
+
+        // Check if the case is directly in this folder
+        if (selectedCase.folderId === folder.id) return true;
+
+        // Check if the case is in any descendant folder
+        return isAncestorOfSelected(folder.id, selectedCase.folderId);
+    };
+
+    // Determine if folder should be auto-expanded
+    const shouldAutoExpand = () => {
+        // Expand if this folder is selected
+        if (folder.id === selectedFolderId) return true;
+
+        // Expand if this folder is an ancestor of the selected folder
+        if (isAncestorOfSelected(folder.id, selectedFolderId)) return true;
+
+        // Expand if this folder contains the selected test case
+        if (containsSelectedCase()) return true;
+
+        return false;
+    };
+
+    const [isExpanded, setIsExpanded] = useState(shouldAutoExpand);
     const hasChildren = childrenFolders.length > 0;
+
+    // Update expansion state when selection changes
+    React.useEffect(() => {
+        setIsExpanded(shouldAutoExpand());
+    }, [selectedFolderId, selectedCaseId]);
 
     const getChildFolders = (parentId: string) => allFolders.filter(f => f.parentId === parentId);
 
@@ -111,7 +158,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
     const rootFolders = folders.filter(f => f.parentId === 'root');
 
     return (
-        <div className="w-64 min-w-[250px] border-r border-slate-200 flex flex-col bg-slate-50">
+        <div className="h-full border-r border-slate-200 flex flex-col bg-slate-50">{/* Removed width constraint, let parent control */}
             <div className="p-4 border-b border-slate-200 flex justify-between items-center">
                 <h3 className="font-semibold text-slate-700 text-sm">{t('testCase.explorer')}</h3>
                 <div className="flex space-x-1">
@@ -158,11 +205,11 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
 
             {/* Quick Filters Section */}
             {!statsLoading && statistics && (
-                <div className="px-3 py-4 border-t border-slate-200">
-                    <h4 className="text-xs font-semibold text-slate-500 uppercase mb-3">
+                <div className="px-3 py-3 border-t border-slate-200">{/* Reduced padding */}
+                    <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">{/* Reduced margin */}
                         {t('testCase.quickFilters') || 'Quick Filters'}
                     </h4>
-                    <div className="space-y-1">
+                    <div className="space-y-0.5">{/* Reduced spacing */}
                         <QuickFilter
                             icon="📋"
                             label={t('testCase.allTests') || 'All Tests'}

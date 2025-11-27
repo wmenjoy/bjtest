@@ -152,6 +152,7 @@ export const TestCaseEditor: React.FC<TestCaseEditorProps> = ({ initialCase, ava
                             onChange={(newSteps) => setFormState(prev => ({ ...prev, steps: newSteps }))}
                             variables={formState.variables}
                             readOnly={false}
+                            projectId={formState.projectId}
                         />
                     </div>
                 </div>
