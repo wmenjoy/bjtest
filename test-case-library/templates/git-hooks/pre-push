@@ -1,0 +1,93 @@
+#!/bin/bash
+# pre-push hook for coverage check
+# 安装: cp pre-push .git/hooks/ && chmod +x .git/hooks/pre-push
+
+set -e
+
+echo "🚀 AI Test Generation Pre-push Hook"
+
+# 配置
+MIN_COVERAGE=80
+RUN_TESTS=true
+CHECK_COVERAGE=true
+
+# 颜色
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+# 检测项目语言并运行测试
+run_tests() {
+    if [ -f "go.mod" ]; then
+        echo "📋 运行 Go 测试..."
+        go test ./... -v
+
+        if [ "$CHECK_COVERAGE" = true ]; then
+            echo "📊 检查覆盖率..."
+            COVERAGE=$(go test ./... -cover | grep -oP 'coverage: \K[0-9.]+' | tail -1)
+            check_coverage "$COVERAGE"
+        fi
+
+    elif [ -f "pom.xml" ]; then
+        echo "📋 运行 Maven 测试..."
+        mvn test -q
+
+        if [ "$CHECK_COVERAGE" = true ]; then
+            echo "📊 检查覆盖率..."
+            mvn jacoco:report -q
+            # 解析 jacoco 报告获取覆盖率
+        fi
+
+    elif [ -f "package.json" ]; then
+        echo "📋 运行 npm 测试..."
+        npm test -- --coverage --watchAll=false
+
+        if [ "$CHECK_COVERAGE" = true ]; then
+            # Jest coverage 通常会自动输出
+            echo "📊 覆盖率报告已生成"
+        fi
+
+    elif [ -f "CMakeLists.txt" ]; then
+        echo "📋 运行 C++ 测试..."
+        if [ -d "build" ]; then
+            cd build && ctest --output-on-failure
+        else
+            echo -e "${YELLOW}⚠️  请先构建项目${NC}"
+        fi
+    fi
+}
+
+# 检查覆盖率
+check_coverage() {
+    local coverage=$1
+
+    if [ -z "$coverage" ]; then
+        echo -e "${YELLOW}⚠️  无法获取覆盖率数据${NC}"
+        return
+    fi
+
+    local coverage_int=${coverage%.*}
+
+    if [ "$coverage_int" -lt "$MIN_COVERAGE" ]; then
+        echo -e "${RED}❌ 覆盖率 ${coverage}% 低于最低要求 ${MIN_COVERAGE}%${NC}"
+        echo ""
+        echo "提示: 使用以下命令分析覆盖率缺口:"
+        echo "  /analyze-coverage --threshold $MIN_COVERAGE"
+        echo ""
+        exit 1
+    else
+        echo -e "${GREEN}✅ 覆盖率 ${coverage}% >= ${MIN_COVERAGE}%${NC}"
+    fi
+}
+
+# 主流程
+main() {
+    if [ "$RUN_TESTS" = true ]; then
+        run_tests
+    fi
+
+    echo -e "${GREEN}✅ 所有检查通过，推送继续...${NC}"
+}
+
+main

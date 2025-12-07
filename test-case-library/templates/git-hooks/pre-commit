@@ -1,0 +1,153 @@
+#!/bin/bash
+# pre-commit hook for AI test generation
+# 安装: cp pre-commit .git/hooks/ && chmod +x .git/hooks/pre-commit
+
+set -e
+
+echo "🧪 AI Test Generation Pre-commit Hook"
+
+# 配置
+MIN_COVERAGE=80
+CHECK_NEW_FILES=true
+AUTO_GENERATE=false  # 设为 true 自动生成缺失的测试
+
+# 颜色
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# 获取修改的源文件
+get_changed_source_files() {
+    local lang=$1
+    case $lang in
+        go)
+            git diff --cached --name-only --diff-filter=ACM | grep '\.go$' | grep -v '_test\.go$' || true
+            ;;
+        java)
+            git diff --cached --name-only --diff-filter=ACM | grep '\.java$' | grep -v 'Test\.java$' || true
+            ;;
+        ts|typescript)
+            git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx)$' | grep -v '\.test\.' | grep -v '\.spec\.' || true
+            ;;
+        cpp)
+            git diff --cached --name-only --diff-filter=ACM | grep -E '\.(cpp|cc|cxx|hpp|h)$' | grep -v '_test\.' || true
+            ;;
+    esac
+}
+
+# 检查测试文件是否存在
+check_test_exists() {
+    local source_file=$1
+    local lang=$2
+    local test_file=""
+
+    case $lang in
+        go)
+            test_file="${source_file%.go}_test.go"
+            ;;
+        java)
+            test_file="${source_file%.java}Test.java"
+            ;;
+        ts|typescript)
+            local base="${source_file%.*}"
+            local ext="${source_file##*.}"
+            test_file="${base}.test.${ext}"
+            ;;
+        cpp)
+            local base="${source_file%.*}"
+            test_file="${base}_test.cpp"
+            ;;
+    esac
+
+    if [ -f "$test_file" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# 检测项目语言
+detect_language() {
+    if [ -f "go.mod" ]; then
+        echo "go"
+    elif [ -f "pom.xml" ] || [ -f "build.gradle" ]; then
+        echo "java"
+    elif [ -f "package.json" ]; then
+        echo "ts"
+    elif [ -f "CMakeLists.txt" ] || [ -f "Makefile" ]; then
+        echo "cpp"
+    else
+        echo "unknown"
+    fi
+}
+
+# 主流程
+main() {
+    local lang=$(detect_language)
+
+    if [ "$lang" = "unknown" ]; then
+        echo -e "${YELLOW}⚠️  无法检测项目语言，跳过测试检查${NC}"
+        exit 0
+    fi
+
+    echo "📁 检测到项目语言: $lang"
+
+    # 获取修改的源文件
+    local changed_files=$(get_changed_source_files $lang)
+
+    if [ -z "$changed_files" ]; then
+        echo -e "${GREEN}✅ 没有需要检查的源文件${NC}"
+        exit 0
+    fi
+
+    local missing_tests=()
+    local files_count=0
+    local missing_count=0
+
+    echo "🔍 检查测试覆盖..."
+
+    for file in $changed_files; do
+        ((files_count++))
+        if ! check_test_exists "$file" "$lang"; then
+            missing_tests+=("$file")
+            ((missing_count++))
+            echo -e "${RED}  ✗ $file - 缺少测试文件${NC}"
+        else
+            echo -e "${GREEN}  ✓ $file${NC}"
+        fi
+    done
+
+    echo ""
+    echo "📊 检查结果: $files_count 个文件, $missing_count 个缺少测试"
+
+    if [ $missing_count -gt 0 ]; then
+        echo ""
+        echo -e "${YELLOW}缺少测试的文件:${NC}"
+        for file in "${missing_tests[@]}"; do
+            echo "  - $file"
+        done
+        echo ""
+
+        if [ "$AUTO_GENERATE" = true ]; then
+            echo -e "${YELLOW}🤖 自动生成测试文件...${NC}"
+            for file in "${missing_tests[@]}"; do
+                echo "  生成: $file"
+                # 调用 Claude Code 命令生成测试
+                # claude-code /generate-tests --file "$file" --output auto
+            done
+        else
+            echo -e "${RED}❌ 提交被阻止: 请为以上文件添加测试${NC}"
+            echo ""
+            echo "提示: 使用以下命令生成测试:"
+            echo "  /generate-tests --file <filename>"
+            echo ""
+            echo "或设置 AUTO_GENERATE=true 自动生成"
+            exit 1
+        fi
+    fi
+
+    echo -e "${GREEN}✅ 测试检查通过${NC}"
+}
+
+main

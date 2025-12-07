@@ -1,0 +1,235 @@
+# AI 测试生成配置文件
+# 将此文件复制到项目根目录并根据项目需求修改
+# 版本: 1.0.0
+
+# ============================================================
+# 项目基本信息
+# ============================================================
+project:
+  name: "your-project-name"
+  language: "go"  # go | java | typescript | cpp
+  framework:
+    test: "testify"  # go: testify | java: junit5 | ts: jest/vitest | cpp: gtest
+    mock: "mockery"  # go: mockery/gomock | java: mockito | ts: jest | cpp: gmock
+
+# ============================================================
+# 测试生成规则
+# ============================================================
+generation:
+  # 默认覆盖目标
+  coverage:
+    target: 80  # 百分比
+    branch: 70
+    line: 80
+
+  # 必须包含的测试类型
+  required_test_types:
+    - unit           # 单元测试
+    - integration    # 集成测试 (可选)
+
+  # 每个函数必须覆盖的场景
+  required_scenarios:
+    - happy_path     # 正常路径
+    - error_path     # 错误路径
+    - edge_cases     # 边界情况
+    - null_handling  # 空值处理
+
+  # 可选增强场景
+  optional_scenarios:
+    - security       # 安全测试 (SQL注入、XSS等)
+    - performance    # 性能边界
+    - concurrency    # 并发安全
+
+# ============================================================
+# 代码风格偏好
+# ============================================================
+style:
+  # 测试命名规范
+  naming:
+    # go: Test{Function}_{Scenario}
+    # java: should{Behavior}When{Condition}
+    # ts: it('should {behavior} when {condition}')
+    pattern: "Test{Function}_{Scenario}"
+
+  # 断言风格
+  assertions:
+    # go: testify | standard
+    # java: assertj | junit
+    # ts: jest | chai
+    library: "testify"
+    style: "fluent"  # fluent | traditional
+
+  # 测试组织方式
+  organization:
+    # grouped: 按被测函数分组
+    # flat: 扁平结构
+    # nested: 嵌套结构 (Java @Nested, Go subtests)
+    structure: "grouped"
+    use_subtests: true
+    use_table_driven: true  # 表驱动测试
+
+# ============================================================
+# Mock 配置
+# ============================================================
+mocking:
+  # 自动生成 mock 的接口
+  auto_mock_interfaces: true
+
+  # Mock 文件位置
+  output_dir: "mocks"  # 相对于被测文件
+
+  # 需要 mock 的外部依赖模式
+  external_patterns:
+    - "*Repository"
+    - "*Client"
+    - "*Service"
+    - "*Gateway"
+
+  # 不需要 mock 的包 (使用真实实现)
+  skip_packages:
+    - "time"
+    - "math"
+    - "strings"
+
+# ============================================================
+# 文件路径规则
+# ============================================================
+paths:
+  # 源代码目录
+  source_dirs:
+    - "internal"
+    - "pkg"
+    - "cmd"
+
+  # 测试文件位置
+  test_location: "same_dir"  # same_dir | test_dir | __tests__
+
+  # 测试文件后缀
+  test_suffix: "_test"  # _test | .test | .spec
+
+  # 排除的路径 (glob 模式)
+  exclude:
+    - "**/vendor/**"
+    - "**/node_modules/**"
+    - "**/*.generated.go"
+    - "**/mocks/**"
+    - "**/testdata/**"
+
+# ============================================================
+# 项目特定的测试模式
+# ============================================================
+custom_patterns:
+  # HTTP Handler 测试
+  http_handlers:
+    enabled: true
+    test_status_codes: [200, 400, 401, 403, 404, 500]
+    test_methods: ["GET", "POST", "PUT", "DELETE"]
+    use_httptest: true
+
+  # Repository 测试
+  repositories:
+    enabled: true
+    use_test_db: true
+    db_type: "sqlite"  # sqlite | testcontainers | h2
+    test_transactions: true
+
+  # Service 层测试
+  services:
+    enabled: true
+    mock_all_dependencies: true
+    test_error_wrapping: true
+
+# ============================================================
+# 特殊处理规则
+# ============================================================
+special_rules:
+  # 特定函数的测试要求
+  functions:
+    # 示例: 认证相关函数需要安全测试
+    - pattern: "*Auth*"
+      require:
+        - security
+        - error_path
+
+    # 示例: 支付相关需要完整边界测试
+    - pattern: "*Payment*"
+      require:
+        - edge_cases
+        - error_path
+        - security
+
+    # 示例: 工具函数只需基本测试
+    - pattern: "utils/*"
+      skip:
+        - integration
+        - security
+
+  # 特定文件的测试要求
+  files:
+    - pattern: "*_handler.go"
+      require:
+        - http_status_codes
+        - request_validation
+
+    - pattern: "*_repository.go"
+      require:
+        - crud_operations
+        - error_handling
+
+# ============================================================
+# 测试数据配置
+# ============================================================
+test_data:
+  # 使用 faker 生成测试数据
+  use_faker: true
+
+  # 固定的测试数据种子 (可重复)
+  random_seed: 42
+
+  # 边界值配置
+  boundaries:
+    string_max_length: 1000
+    int_max: 2147483647
+    int_min: -2147483648
+    array_max_size: 1000
+
+  # 预定义的测试用户
+  test_users:
+    admin:
+      id: "test-admin-001"
+      role: "admin"
+    regular:
+      id: "test-user-001"
+      role: "user"
+
+# ============================================================
+# CI/CD 集成
+# ============================================================
+ci:
+  # 失败阈值
+  fail_on_coverage_drop: true
+  coverage_threshold: 80
+
+  # 报告格式
+  report_formats:
+    - "html"
+    - "json"
+    - "cobertura"
+
+  # 输出目录
+  output_dir: "coverage"
+
+# ============================================================
+# 质量门禁
+# ============================================================
+quality_gates:
+  # 必须通过的检查
+  required:
+    - no_skipped_tests      # 不允许跳过测试
+    - no_todo_in_tests      # 测试中不能有 TODO
+    - assertions_per_test   # 每个测试至少一个断言
+
+  # 警告级别的检查
+  warnings:
+    - test_execution_time   # 单个测试超过 5s 警告
+    - duplicate_test_names  # 重复的测试名称
