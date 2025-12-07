@@ -127,6 +127,7 @@ Thumbs.db
 /tmp/
 /temp/
  backend/test-service
+
 # Build artifacts
 /dist/
 /build/

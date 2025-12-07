@@ -7,18 +7,29 @@ import (
 	"gorm.io/gorm"
 )
 
-// VariableChangeRepository handles variable change tracking
-type VariableChangeRepository struct {
+// VariableChangeRepository defines the interface for variable change tracking
+type VariableChangeRepository interface {
+	Create(change *models.WorkflowVariableChange) error
+	ListByRunID(runID string) ([]models.WorkflowVariableChange, error)
+	ListByVariableName(runID, varName string) ([]models.WorkflowVariableChange, error)
+	CreateWithTenant(ctx context.Context, change *models.WorkflowVariableChange) error
+	ListByRunIDWithTenant(ctx context.Context, runID, tenantID, projectID string) ([]models.WorkflowVariableChange, error)
+	ListByVariableNameWithTenant(ctx context.Context, runID, varName, tenantID, projectID string) ([]models.WorkflowVariableChange, error)
+	DeleteByRunIDWithTenant(ctx context.Context, runID, tenantID, projectID string) error
+}
+
+// variableChangeRepository handles variable change tracking
+type variableChangeRepository struct {
 	db *gorm.DB
 }
 
 // NewVariableChangeRepository creates a new repository
-func NewVariableChangeRepository(db *gorm.DB) *VariableChangeRepository {
-	return &VariableChangeRepository{db: db}
+func NewVariableChangeRepository(db *gorm.DB) VariableChangeRepository {
+	return &variableChangeRepository{db: db}
 }
 
 // Create creates a new variable change record
-func (r *VariableChangeRepository) Create(change *models.WorkflowVariableChange) error {
+func (r *variableChangeRepository) Create(change *models.WorkflowVariableChange) error {
 	result := r.db.Create(change)
 	if result.Error != nil {
 		return fmt.Errorf("failed to create variable change: %w", result.Error)
@@ -27,7 +38,7 @@ func (r *VariableChangeRepository) Create(change *models.WorkflowVariableChange)
 }
 
 // ListByRunID retrieves all variable changes for a run
-func (r *VariableChangeRepository) ListByRunID(runID string) ([]models.WorkflowVariableChange, error) {
+func (r *variableChangeRepository) ListByRunID(runID string) ([]models.WorkflowVariableChange, error) {
 	var changes []models.WorkflowVariableChange
 
 	result := r.db.Where("run_id = ?", runID).
@@ -42,7 +53,7 @@ func (r *VariableChangeRepository) ListByRunID(runID string) ([]models.WorkflowV
 }
 
 // ListByVariableName retrieves all changes for a specific variable
-func (r *VariableChangeRepository) ListByVariableName(runID, varName string) ([]models.WorkflowVariableChange, error) {
+func (r *variableChangeRepository) ListByVariableName(runID, varName string) ([]models.WorkflowVariableChange, error) {
 	var changes []models.WorkflowVariableChange
 
 	result := r.db.Where("run_id = ? AND var_name = ?", runID, varName).
@@ -58,7 +69,7 @@ func (r *VariableChangeRepository) ListByVariableName(runID, varName string) ([]
 
 // CreateWithTenant creates a new variable change record with context
 // Note: Tenant isolation is enforced at WorkflowRun level, not on child records
-func (r *VariableChangeRepository) CreateWithTenant(ctx context.Context, change *models.WorkflowVariableChange) error {
+func (r *variableChangeRepository) CreateWithTenant(ctx context.Context, change *models.WorkflowVariableChange) error {
 	result := r.db.WithContext(ctx).Create(change)
 	if result.Error != nil {
 		return fmt.Errorf("failed to create variable change: %w", result.Error)
@@ -68,7 +79,7 @@ func (r *VariableChangeRepository) CreateWithTenant(ctx context.Context, change 
 
 // ListByRunIDWithTenant retrieves all variable changes for a run with tenant isolation
 // Tenant isolation is enforced by accessing WorkflowRun with tenant checks first
-func (r *VariableChangeRepository) ListByRunIDWithTenant(ctx context.Context, runID, tenantID, projectID string) ([]models.WorkflowVariableChange, error) {
+func (r *variableChangeRepository) ListByRunIDWithTenant(ctx context.Context, runID, tenantID, projectID string) ([]models.WorkflowVariableChange, error) {
 	var changes []models.WorkflowVariableChange
 
 	// Simply query by runID - tenant isolation is enforced at WorkflowRun level
@@ -86,7 +97,7 @@ func (r *VariableChangeRepository) ListByRunIDWithTenant(ctx context.Context, ru
 
 // ListByVariableNameWithTenant retrieves all changes for a specific variable with tenant isolation
 // Tenant isolation is enforced by accessing WorkflowRun with tenant checks first
-func (r *VariableChangeRepository) ListByVariableNameWithTenant(ctx context.Context, runID, varName, tenantID, projectID string) ([]models.WorkflowVariableChange, error) {
+func (r *variableChangeRepository) ListByVariableNameWithTenant(ctx context.Context, runID, varName, tenantID, projectID string) ([]models.WorkflowVariableChange, error) {
 	var changes []models.WorkflowVariableChange
 
 	// Simply query by runID and varName - tenant isolation is enforced at WorkflowRun level
@@ -104,7 +115,7 @@ func (r *VariableChangeRepository) ListByVariableNameWithTenant(ctx context.Cont
 
 // DeleteByRunIDWithTenant deletes all variable changes for a run with tenant isolation
 // Tenant isolation is enforced by accessing WorkflowRun with tenant checks first
-func (r *VariableChangeRepository) DeleteByRunIDWithTenant(ctx context.Context, runID, tenantID, projectID string) error {
+func (r *variableChangeRepository) DeleteByRunIDWithTenant(ctx context.Context, runID, tenantID, projectID string) error {
 	result := r.db.WithContext(ctx).
 		Where("run_id = ?", runID).
 		Delete(&models.WorkflowVariableChange{})

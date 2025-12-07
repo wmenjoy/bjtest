@@ -42,35 +42,35 @@ type ActionTemplateService interface {
 	RecordUsage(ctx context.Context, templateID string) error
 }
 
-// actionTemplateServiceImpl implements ActionTemplateService
-type actionTemplateServiceImpl struct {
+// actionTemplateService implements ActionTemplateService
+type actionTemplateService struct {
 	repo repository.ActionTemplateRepository
 }
 
 // NewActionTemplateService creates a new ActionTemplateService
 func NewActionTemplateService(repo repository.ActionTemplateRepository) ActionTemplateService {
-	return &actionTemplateServiceImpl{
+	return &actionTemplateService{
 		repo: repo,
 	}
 }
 
 // Create creates a new action template
-func (s *actionTemplateServiceImpl) Create(ctx context.Context, template *models.ActionTemplate) error {
+func (s *actionTemplateService) Create(ctx context.Context, template *models.ActionTemplate) error {
 	return s.repo.Create(ctx, template)
 }
 
 // GetByID retrieves an action template by database ID
-func (s *actionTemplateServiceImpl) GetByID(ctx context.Context, id uint) (*models.ActionTemplate, error) {
+func (s *actionTemplateService) GetByID(ctx context.Context, id uint) (*models.ActionTemplate, error) {
 	return s.repo.GetByID(ctx, id)
 }
 
 // GetByTemplateID retrieves an action template by template_id
-func (s *actionTemplateServiceImpl) GetByTemplateID(ctx context.Context, templateID string) (*models.ActionTemplate, error) {
+func (s *actionTemplateService) GetByTemplateID(ctx context.Context, templateID string) (*models.ActionTemplate, error) {
 	return s.repo.GetByTemplateID(ctx, templateID)
 }
 
 // List retrieves action templates with filtering and pagination
-func (s *actionTemplateServiceImpl) List(ctx context.Context, filter repository.ActionTemplateFilter) ([]*models.ActionTemplate, int64, error) {
+func (s *actionTemplateService) List(ctx context.Context, filter repository.ActionTemplateFilter) ([]*models.ActionTemplate, int64, error) {
 	return s.repo.List(ctx, filter)
 }
 
@@ -80,17 +80,17 @@ func (s *actionTemplateServiceImpl) List(ctx context.Context, filter repository.
 // Level 2: scope='platform' AND is_public=true
 // Level 3: scope='organization' AND tenant_id=current organization
 // Level 4: scope='project' AND tenant_id=current organization AND project_id=current project
-func (s *actionTemplateServiceImpl) GetAccessibleTemplates(ctx context.Context, tenantID string, projectID string, filter repository.ActionTemplateFilter) ([]*models.ActionTemplate, int64, error) {
+func (s *actionTemplateService) GetAccessibleTemplates(ctx context.Context, tenantID string, projectID string, filter repository.ActionTemplateFilter) ([]*models.ActionTemplate, int64, error) {
 	return s.repo.GetAccessibleTemplates(ctx, tenantID, projectID, filter)
 }
 
 // Update updates an existing action template
-func (s *actionTemplateServiceImpl) Update(ctx context.Context, template *models.ActionTemplate) error {
+func (s *actionTemplateService) Update(ctx context.Context, template *models.ActionTemplate) error {
 	return s.repo.Update(ctx, template)
 }
 
 // Delete soft deletes an action template
-func (s *actionTemplateServiceImpl) Delete(ctx context.Context, id uint) error {
+func (s *actionTemplateService) Delete(ctx context.Context, id uint) error {
 	return s.repo.Delete(ctx, id)
 }
 
@@ -99,7 +99,7 @@ func (s *actionTemplateServiceImpl) Delete(ctx context.Context, id uint) error {
 // 1. Source template must be system or platform scoped
 // 2. Creates a new tenant-scoped template with unique template_id
 // 3. Resets usage count to 0 for the new copy
-func (s *actionTemplateServiceImpl) CopyToTenant(ctx context.Context, sourceTemplateID string, tenantID string, newName string) (*models.ActionTemplate, error) {
+func (s *actionTemplateService) CopyToTenant(ctx context.Context, sourceTemplateID string, tenantID string, newName string) (*models.ActionTemplate, error) {
 	// Get source template
 	source, err := s.repo.GetByTemplateID(ctx, sourceTemplateID)
 	if err != nil {
@@ -139,6 +139,6 @@ func (s *actionTemplateServiceImpl) CopyToTenant(ctx context.Context, sourceTemp
 }
 
 // RecordUsage increments the usage count for a template
-func (s *actionTemplateServiceImpl) RecordUsage(ctx context.Context, templateID string) error {
+func (s *actionTemplateService) RecordUsage(ctx context.Context, templateID string) error {
 	return s.repo.IncrementUsageCount(ctx, templateID)
 }

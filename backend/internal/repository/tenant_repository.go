@@ -19,29 +19,29 @@ type TenantRepository interface {
 	GetWithMembers(tenantID string) (*models.Tenant, error)
 }
 
-// tenantRepo 实现
-type tenantRepo struct {
+// tenantRepository 实现
+type tenantRepository struct {
 	db *gorm.DB
 }
 
 // NewTenantRepository 创建Repository实例
 func NewTenantRepository(db *gorm.DB) TenantRepository {
-	return &tenantRepo{db: db}
+	return &tenantRepository{db: db}
 }
 
-func (r *tenantRepo) Create(tenant *models.Tenant) error {
+func (r *tenantRepository) Create(tenant *models.Tenant) error {
 	return r.db.Create(tenant).Error
 }
 
-func (r *tenantRepo) Update(tenant *models.Tenant) error {
+func (r *tenantRepository) Update(tenant *models.Tenant) error {
 	return r.db.Save(tenant).Error
 }
 
-func (r *tenantRepo) Delete(tenantID string) error {
+func (r *tenantRepository) Delete(tenantID string) error {
 	return r.db.Where("tenant_id = ?", tenantID).Delete(&models.Tenant{}).Error
 }
 
-func (r *tenantRepo) FindByID(tenantID string) (*models.Tenant, error) {
+func (r *tenantRepository) FindByID(tenantID string) (*models.Tenant, error) {
 	var tenant models.Tenant
 	err := r.db.Where("tenant_id = ?", tenantID).First(&tenant).Error
 	if err != nil {
@@ -53,19 +53,19 @@ func (r *tenantRepo) FindByID(tenantID string) (*models.Tenant, error) {
 	return &tenant, nil
 }
 
-func (r *tenantRepo) FindAll() ([]models.Tenant, error) {
+func (r *tenantRepository) FindAll() ([]models.Tenant, error) {
 	var tenants []models.Tenant
 	err := r.db.Find(&tenants).Error
 	return tenants, err
 }
 
-func (r *tenantRepo) FindByStatus(status string) ([]models.Tenant, error) {
+func (r *tenantRepository) FindByStatus(status string) ([]models.Tenant, error) {
 	var tenants []models.Tenant
 	err := r.db.Where("status = ?", status).Find(&tenants).Error
 	return tenants, err
 }
 
-func (r *tenantRepo) GetWithProjects(tenantID string) (*models.Tenant, error) {
+func (r *tenantRepository) GetWithProjects(tenantID string) (*models.Tenant, error) {
 	var tenant models.Tenant
 	err := r.db.Where("tenant_id = ?", tenantID).Preload("Projects").First(&tenant).Error
 	if err != nil {
@@ -77,7 +77,7 @@ func (r *tenantRepo) GetWithProjects(tenantID string) (*models.Tenant, error) {
 	return &tenant, nil
 }
 
-func (r *tenantRepo) GetWithMembers(tenantID string) (*models.Tenant, error) {
+func (r *tenantRepository) GetWithMembers(tenantID string) (*models.Tenant, error) {
 	var tenant models.Tenant
 	err := r.db.Where("tenant_id = ?", tenantID).Preload("Members").First(&tenant).Error
 	if err != nil {

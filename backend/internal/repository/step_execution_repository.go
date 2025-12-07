@@ -7,18 +7,31 @@ import (
 	"gorm.io/gorm"
 )
 
-// StepExecutionRepository handles step execution data access
-type StepExecutionRepository struct {
+// StepExecutionRepository defines the interface for step execution data access
+type StepExecutionRepository interface {
+	Create(stepExec *models.WorkflowStepExecution) error
+	Update(stepExec *models.WorkflowStepExecution) error
+	ListByRunID(runID string) ([]models.WorkflowStepExecution, error)
+	GetByStepID(runID, stepID string) (*models.WorkflowStepExecution, error)
+	CreateWithTenant(ctx context.Context, stepExec *models.WorkflowStepExecution) error
+	UpdateWithTenant(ctx context.Context, stepExec *models.WorkflowStepExecution) error
+	ListByRunIDWithTenant(ctx context.Context, runID, tenantID, projectID string) ([]models.WorkflowStepExecution, error)
+	GetByStepIDWithTenant(ctx context.Context, runID, stepID, tenantID, projectID string) (*models.WorkflowStepExecution, error)
+	DeleteByRunIDWithTenant(ctx context.Context, runID, tenantID, projectID string) error
+}
+
+// stepExecutionRepository handles step execution data access
+type stepExecutionRepository struct {
 	db *gorm.DB
 }
 
 // NewStepExecutionRepository creates a new repository
-func NewStepExecutionRepository(db *gorm.DB) *StepExecutionRepository {
-	return &StepExecutionRepository{db: db}
+func NewStepExecutionRepository(db *gorm.DB) StepExecutionRepository {
+	return &stepExecutionRepository{db: db}
 }
 
 // Create creates a new step execution record
-func (r *StepExecutionRepository) Create(stepExec *models.WorkflowStepExecution) error {
+func (r *stepExecutionRepository) Create(stepExec *models.WorkflowStepExecution) error {
 	result := r.db.Create(stepExec)
 	if result.Error != nil {
 		return fmt.Errorf("failed to create step execution: %w", result.Error)
@@ -27,7 +40,7 @@ func (r *StepExecutionRepository) Create(stepExec *models.WorkflowStepExecution)
 }
 
 // Update updates a step execution record
-func (r *StepExecutionRepository) Update(stepExec *models.WorkflowStepExecution) error {
+func (r *stepExecutionRepository) Update(stepExec *models.WorkflowStepExecution) error {
 	result := r.db.Save(stepExec)
 	if result.Error != nil {
 		return fmt.Errorf("failed to update step execution: %w", result.Error)
@@ -36,7 +49,7 @@ func (r *StepExecutionRepository) Update(stepExec *models.WorkflowStepExecution)
 }
 
 // ListByRunID retrieves all step executions for a run
-func (r *StepExecutionRepository) ListByRunID(runID string) ([]models.WorkflowStepExecution, error) {
+func (r *stepExecutionRepository) ListByRunID(runID string) ([]models.WorkflowStepExecution, error) {
 	var executions []models.WorkflowStepExecution
 
 	result := r.db.Where("run_id = ?", runID).Order("start_time ASC").Find(&executions)
@@ -48,7 +61,7 @@ func (r *StepExecutionRepository) ListByRunID(runID string) ([]models.WorkflowSt
 }
 
 // GetByStepID retrieves a specific step execution
-func (r *StepExecutionRepository) GetByStepID(runID, stepID string) (*models.WorkflowStepExecution, error) {
+func (r *stepExecutionRepository) GetByStepID(runID, stepID string) (*models.WorkflowStepExecution, error) {
 	var execution models.WorkflowStepExecution
 
 	result := r.db.Where("run_id = ? AND step_id = ?", runID, stepID).First(&execution)
@@ -64,7 +77,7 @@ func (r *StepExecutionRepository) GetByStepID(runID, stepID string) (*models.Wor
 
 // CreateWithTenant creates a new step execution record with context
 // Note: Tenant isolation is enforced at WorkflowRun level, not on child records
-func (r *StepExecutionRepository) CreateWithTenant(ctx context.Context, stepExec *models.WorkflowStepExecution) error {
+func (r *stepExecutionRepository) CreateWithTenant(ctx context.Context, stepExec *models.WorkflowStepExecution) error {
 	result := r.db.WithContext(ctx).Create(stepExec)
 	if result.Error != nil {
 		return fmt.Errorf("failed to create step execution: %w", result.Error)
@@ -73,7 +86,7 @@ func (r *StepExecutionRepository) CreateWithTenant(ctx context.Context, stepExec
 }
 
 // UpdateWithTenant updates a step execution record with context
-func (r *StepExecutionRepository) UpdateWithTenant(ctx context.Context, stepExec *models.WorkflowStepExecution) error {
+func (r *stepExecutionRepository) UpdateWithTenant(ctx context.Context, stepExec *models.WorkflowStepExecution) error {
 	// Update by run_id and step_id (tenant isolation enforced at WorkflowRun level)
 	result := r.db.WithContext(ctx).
 		Where("run_id = ? AND step_id = ?",
@@ -93,7 +106,7 @@ func (r *StepExecutionRepository) UpdateWithTenant(ctx context.Context, stepExec
 
 // ListByRunIDWithTenant retrieves all step executions for a run with tenant isolation
 // Tenant isolation is enforced by accessing WorkflowRun with tenant checks first
-func (r *StepExecutionRepository) ListByRunIDWithTenant(ctx context.Context, runID, tenantID, projectID string) ([]models.WorkflowStepExecution, error) {
+func (r *stepExecutionRepository) ListByRunIDWithTenant(ctx context.Context, runID, tenantID, projectID string) ([]models.WorkflowStepExecution, error) {
 	var executions []models.WorkflowStepExecution
 
 	// Simply query by runID - tenant isolation is enforced at WorkflowRun level
@@ -111,7 +124,7 @@ func (r *StepExecutionRepository) ListByRunIDWithTenant(ctx context.Context, run
 
 // GetByStepIDWithTenant retrieves a specific step execution with tenant isolation
 // Tenant isolation is enforced by accessing WorkflowRun with tenant checks first
-func (r *StepExecutionRepository) GetByStepIDWithTenant(ctx context.Context, runID, stepID, tenantID, projectID string) (*models.WorkflowStepExecution, error) {
+func (r *stepExecutionRepository) GetByStepIDWithTenant(ctx context.Context, runID, stepID, tenantID, projectID string) (*models.WorkflowStepExecution, error) {
 	var execution models.WorkflowStepExecution
 
 	// Simply query by runID and stepID - tenant isolation is enforced at WorkflowRun level
@@ -131,7 +144,7 @@ func (r *StepExecutionRepository) GetByStepIDWithTenant(ctx context.Context, run
 
 // DeleteByRunIDWithTenant deletes all step executions for a run with tenant isolation
 // Tenant isolation is enforced by accessing WorkflowRun with tenant checks first
-func (r *StepExecutionRepository) DeleteByRunIDWithTenant(ctx context.Context, runID, tenantID, projectID string) error {
+func (r *stepExecutionRepository) DeleteByRunIDWithTenant(ctx context.Context, runID, tenantID, projectID string) error {
 	result := r.db.WithContext(ctx).
 		Where("run_id = ?", runID).
 		Delete(&models.WorkflowStepExecution{})

@@ -32,29 +32,29 @@ type TestGroupRepository interface {
 	GetTreeWithTenant(ctx context.Context, tenantID, projectID string) ([]models.TestGroup, error)
 }
 
-// testGroupRepo 实现
-type testGroupRepo struct {
+// testGroupRepository 实现
+type testGroupRepository struct {
 	db *gorm.DB
 }
 
 // NewTestGroupRepository 创建Repository实例
 func NewTestGroupRepository(db *gorm.DB) TestGroupRepository {
-	return &testGroupRepo{db: db}
+	return &testGroupRepository{db: db}
 }
 
-func (r *testGroupRepo) Create(group *models.TestGroup) error {
+func (r *testGroupRepository) Create(group *models.TestGroup) error {
 	return r.db.Create(group).Error
 }
 
-func (r *testGroupRepo) Update(group *models.TestGroup) error {
+func (r *testGroupRepository) Update(group *models.TestGroup) error {
 	return r.db.Save(group).Error
 }
 
-func (r *testGroupRepo) Delete(groupID string) error {
+func (r *testGroupRepository) Delete(groupID string) error {
 	return r.db.Where("group_id = ?", groupID).Delete(&models.TestGroup{}).Error
 }
 
-func (r *testGroupRepo) FindByID(groupID string) (*models.TestGroup, error) {
+func (r *testGroupRepository) FindByID(groupID string) (*models.TestGroup, error) {
 	var group models.TestGroup
 	err := r.db.Where("group_id = ?", groupID).First(&group).Error
 	if err != nil {
@@ -66,19 +66,19 @@ func (r *testGroupRepo) FindByID(groupID string) (*models.TestGroup, error) {
 	return &group, nil
 }
 
-func (r *testGroupRepo) FindByParentID(parentID string) ([]models.TestGroup, error) {
+func (r *testGroupRepository) FindByParentID(parentID string) ([]models.TestGroup, error) {
 	var groups []models.TestGroup
 	err := r.db.Where("parent_id = ?", parentID).Find(&groups).Error
 	return groups, err
 }
 
-func (r *testGroupRepo) FindAll() ([]models.TestGroup, error) {
+func (r *testGroupRepository) FindAll() ([]models.TestGroup, error) {
 	var groups []models.TestGroup
 	err := r.db.Find(&groups).Error
 	return groups, err
 }
 
-func (r *testGroupRepo) GetTree() ([]models.TestGroup, error) {
+func (r *testGroupRepository) GetTree() ([]models.TestGroup, error) {
 	var groups []models.TestGroup
 	// 获取所有分组
 	if err := r.db.Find(&groups).Error; err != nil {
@@ -123,7 +123,7 @@ func (r *testGroupRepo) GetTree() ([]models.TestGroup, error) {
 }
 
 // CreateWithTenant creates a new test group with tenant validation
-func (r *testGroupRepo) CreateWithTenant(ctx context.Context, group *models.TestGroup) error {
+func (r *testGroupRepository) CreateWithTenant(ctx context.Context, group *models.TestGroup) error {
 	// Validate tenant and project are set
 	if group.TenantID == "" {
 		return fmt.Errorf("tenant_id is required")
@@ -147,7 +147,7 @@ func (r *testGroupRepo) CreateWithTenant(ctx context.Context, group *models.Test
 }
 
 // UpdateWithTenant updates a test group with tenant isolation
-func (r *testGroupRepo) UpdateWithTenant(ctx context.Context, group *models.TestGroup) error {
+func (r *testGroupRepository) UpdateWithTenant(ctx context.Context, group *models.TestGroup) error {
 	// Validate tenant and project match
 	if group.TenantID == "" || group.ProjectID == "" {
 		return fmt.Errorf("tenant_id and project_id are required")
@@ -171,7 +171,7 @@ func (r *testGroupRepo) UpdateWithTenant(ctx context.Context, group *models.Test
 }
 
 // DeleteWithTenant soft deletes a test group with tenant isolation
-func (r *testGroupRepo) DeleteWithTenant(ctx context.Context, groupID, tenantID, projectID string) error {
+func (r *testGroupRepository) DeleteWithTenant(ctx context.Context, groupID, tenantID, projectID string) error {
 	result := r.db.WithContext(ctx).
 		Where("group_id = ? AND tenant_id = ? AND project_id = ?",
 			groupID, tenantID, projectID).
@@ -189,7 +189,7 @@ func (r *testGroupRepo) DeleteWithTenant(ctx context.Context, groupID, tenantID,
 }
 
 // FindByIDWithTenant retrieves a test group with tenant isolation
-func (r *testGroupRepo) FindByIDWithTenant(ctx context.Context, groupID, tenantID, projectID string) (*models.TestGroup, error) {
+func (r *testGroupRepository) FindByIDWithTenant(ctx context.Context, groupID, tenantID, projectID string) (*models.TestGroup, error) {
 	var group models.TestGroup
 
 	result := r.db.WithContext(ctx).
@@ -208,7 +208,7 @@ func (r *testGroupRepo) FindByIDWithTenant(ctx context.Context, groupID, tenantI
 }
 
 // FindByParentIDWithTenant retrieves test groups by parent ID with tenant isolation
-func (r *testGroupRepo) FindByParentIDWithTenant(ctx context.Context, parentID, tenantID, projectID string) ([]models.TestGroup, error) {
+func (r *testGroupRepository) FindByParentIDWithTenant(ctx context.Context, parentID, tenantID, projectID string) ([]models.TestGroup, error) {
 	var groups []models.TestGroup
 
 	result := r.db.WithContext(ctx).
@@ -224,7 +224,7 @@ func (r *testGroupRepo) FindByParentIDWithTenant(ctx context.Context, parentID, 
 }
 
 // FindAllWithTenant retrieves all test groups with tenant isolation
-func (r *testGroupRepo) FindAllWithTenant(ctx context.Context, tenantID, projectID string) ([]models.TestGroup, error) {
+func (r *testGroupRepository) FindAllWithTenant(ctx context.Context, tenantID, projectID string) ([]models.TestGroup, error) {
 	var groups []models.TestGroup
 
 	result := r.db.WithContext(ctx).
@@ -240,7 +240,7 @@ func (r *testGroupRepo) FindAllWithTenant(ctx context.Context, tenantID, project
 }
 
 // GetTreeWithTenant retrieves hierarchical test group tree with tenant isolation
-func (r *testGroupRepo) GetTreeWithTenant(ctx context.Context, tenantID, projectID string) ([]models.TestGroup, error) {
+func (r *testGroupRepository) GetTreeWithTenant(ctx context.Context, tenantID, projectID string) ([]models.TestGroup, error) {
 	var groups []models.TestGroup
 
 	// Get all groups for this tenant and project

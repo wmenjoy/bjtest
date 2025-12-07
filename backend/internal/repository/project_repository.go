@@ -23,29 +23,29 @@ type ProjectRepository interface {
 	UpdateTestGroupCount(projectID string, count int) error
 }
 
-// projectRepo 实现
-type projectRepo struct {
+// projectRepository 实现
+type projectRepository struct {
 	db *gorm.DB
 }
 
 // NewProjectRepository 创建Repository实例
 func NewProjectRepository(db *gorm.DB) ProjectRepository {
-	return &projectRepo{db: db}
+	return &projectRepository{db: db}
 }
 
-func (r *projectRepo) Create(project *models.Project) error {
+func (r *projectRepository) Create(project *models.Project) error {
 	return r.db.Create(project).Error
 }
 
-func (r *projectRepo) Update(project *models.Project) error {
+func (r *projectRepository) Update(project *models.Project) error {
 	return r.db.Save(project).Error
 }
 
-func (r *projectRepo) Delete(projectID string) error {
+func (r *projectRepository) Delete(projectID string) error {
 	return r.db.Where("project_id = ?", projectID).Delete(&models.Project{}).Error
 }
 
-func (r *projectRepo) FindByID(projectID string) (*models.Project, error) {
+func (r *projectRepository) FindByID(projectID string) (*models.Project, error) {
 	var project models.Project
 	err := r.db.Where("project_id = ?", projectID).First(&project).Error
 	if err != nil {
@@ -57,25 +57,25 @@ func (r *projectRepo) FindByID(projectID string) (*models.Project, error) {
 	return &project, nil
 }
 
-func (r *projectRepo) FindByTenantID(tenantID string) ([]models.Project, error) {
+func (r *projectRepository) FindByTenantID(tenantID string) ([]models.Project, error) {
 	var projects []models.Project
 	err := r.db.Where("tenant_id = ?", tenantID).Find(&projects).Error
 	return projects, err
 }
 
-func (r *projectRepo) FindAll() ([]models.Project, error) {
+func (r *projectRepository) FindAll() ([]models.Project, error) {
 	var projects []models.Project
 	err := r.db.Find(&projects).Error
 	return projects, err
 }
 
-func (r *projectRepo) FindByStatus(status string) ([]models.Project, error) {
+func (r *projectRepository) FindByStatus(status string) ([]models.Project, error) {
 	var projects []models.Project
 	err := r.db.Where("status = ?", status).Find(&projects).Error
 	return projects, err
 }
 
-func (r *projectRepo) GetWithTestGroups(projectID string) (*models.Project, error) {
+func (r *projectRepository) GetWithTestGroups(projectID string) (*models.Project, error) {
 	var project models.Project
 	err := r.db.Where("project_id = ?", projectID).Preload("TestGroups").First(&project).Error
 	if err != nil {
@@ -87,7 +87,7 @@ func (r *projectRepo) GetWithTestGroups(projectID string) (*models.Project, erro
 	return &project, nil
 }
 
-func (r *projectRepo) GetWithTestCases(projectID string) (*models.Project, error) {
+func (r *projectRepository) GetWithTestCases(projectID string) (*models.Project, error) {
 	var project models.Project
 	err := r.db.Where("project_id = ?", projectID).Preload("TestCases").First(&project).Error
 	if err != nil {
@@ -99,7 +99,7 @@ func (r *projectRepo) GetWithTestCases(projectID string) (*models.Project, error
 	return &project, nil
 }
 
-func (r *projectRepo) GetWithMembers(projectID string) (*models.Project, error) {
+func (r *projectRepository) GetWithMembers(projectID string) (*models.Project, error) {
 	var project models.Project
 	err := r.db.Where("project_id = ?", projectID).Preload("Members").First(&project).Error
 	if err != nil {
@@ -111,13 +111,13 @@ func (r *projectRepo) GetWithMembers(projectID string) (*models.Project, error) 
 	return &project, nil
 }
 
-func (r *projectRepo) UpdateTestCaseCount(projectID string, count int) error {
+func (r *projectRepository) UpdateTestCaseCount(projectID string, count int) error {
 	return r.db.Model(&models.Project{}).
 		Where("project_id = ?", projectID).
 		Update("test_case_count", count).Error
 }
 
-func (r *projectRepo) UpdateTestGroupCount(projectID string, count int) error {
+func (r *projectRepository) UpdateTestGroupCount(projectID string, count int) error {
 	return r.db.Model(&models.Project{}).
 		Where("project_id = ?", projectID).
 		Update("test_group_count", count).Error

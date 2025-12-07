@@ -5,14 +5,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Repository Overview
 
 This is a **Test Management Platform** consisting of two main components:
-1. **nextest-platform**: Go backend service for test case management, execution, and workflow orchestration
-2. **NextTestPlatformUI**: React frontend built with Vite, TypeScript, and Gemini AI integration
+1. **backend/**: Go backend service for test case management, execution, and workflow orchestration
+2. **front/**: React frontend built with Vite, TypeScript, and Gemini AI integration
 
 ## Project Structure
 
 ```
-testplatform/
-├── nextest-platform/          # Go backend service
+bjtest/
+├── backend/                  # Go backend service
 │   ├── cmd/
 │   │   ├── server/           # Main service entry point
 │   │   └── import/           # Data import tool
@@ -30,13 +30,22 @@ testplatform/
 │   ├── web/                  # Embedded web UI (HTML)
 │   └── data/                 # SQLite database (auto-created)
 │
-└── NextTestPlatformUI/        # React frontend
-    ├── components/           # React components
-    ├── hooks/               # Custom React hooks
-    └── data/                # Sample data files
+├── front/                    # React frontend
+│   ├── components/           # React components
+│   ├── hooks/                # Custom React hooks
+│   ├── services/             # API services and mappers
+│   └── data/                 # Sample data files
+│
+└── docs/                     # Seven-layer documentation
+    ├── 1-specs/              # Technical specifications
+    ├── 3-guides/             # Development and user guides
+    ├── 4-planning/           # Active and completed plans
+    ├── 5-wiki/               # Business knowledge base
+    ├── 6-decisions/          # Architecture decisions
+    └── 7-archive/            # Historical documents
 ```
 
-## Backend (nextest-platform)
+## Backend (backend/)
 
 ### Technology Stack
 - **Language**: Go 1.24
@@ -57,7 +66,7 @@ Clean layered architecture:
 
 **Build & Run**:
 ```bash
-cd nextest-platform
+cd backend
 
 # One-command setup (install deps + build + import sample data)
 make init
@@ -131,7 +140,7 @@ make api-runs          # List test runs
 - Foreign key constraints with CASCADE deletion for workflow data
 - Comprehensive indexing for performance
 
-See `nextest-platform/docs/DATABASE_DESIGN.md` for complete schema.
+See `docs/1-specs/database/schema.md` for complete schema.
 
 ### WebSocket Architecture
 
@@ -154,7 +163,7 @@ See `nextest-platform/docs/DATABASE_DESIGN.md` for complete schema.
 
 **WebSocket endpoint**: `ws://host/api/v2/workflows/runs/:runId/stream`
 
-See `nextest-platform/WEBSOCKET_ARCHITECTURE.md` for detailed flow diagrams.
+See `docs/1-specs/backend/websocket-architecture.md` for detailed flow diagrams.
 
 ### Workflow Engine
 
@@ -203,7 +212,7 @@ See `nextest-platform/WEBSOCKET_ARCHITECTURE.md` for detailed flow diagrams.
 - `GET /groups/tree` - Get hierarchical tree
 - `POST /groups/:id/execute` - Execute all tests in group
 
-See `nextest-platform/docs/API_DOCUMENTATION.md` for complete API reference.
+See `docs/1-specs/api/v2-documentation.md` for complete API reference.
 
 ### Configuration
 
@@ -237,7 +246,7 @@ type TestCase struct {
 }
 ```
 
-## Frontend (NextTestPlatformUI)
+## Frontend (front/)
 
 ### Technology Stack
 - **Framework**: React 19.2 + TypeScript
@@ -250,7 +259,7 @@ type TestCase struct {
 ### Common Commands
 
 ```bash
-cd NextTestPlatformUI
+cd front
 
 # Install dependencies
 npm install
@@ -267,7 +276,7 @@ npm run preview
 
 ### Key Components
 
-Located in `NextTestPlatformUI/components/`:
+Located in `front/components/`:
 - `ActionLibrary.tsx` - Action management and library
 - `Dashboard.tsx` - Main dashboard view
 - `TestCaseManager.tsx` - Test case CRUD operations
@@ -290,7 +299,7 @@ GEMINI_API_KEY=your_gemini_api_key_here
 
 1. **Create test data**:
    ```bash
-   cd nextest-platform
+   cd backend
    # Edit examples/sample-tests.json
    make import
    ```
@@ -302,7 +311,7 @@ GEMINI_API_KEY=your_gemini_api_key_here
 
 3. **Run frontend** (separate terminal):
    ```bash
-   cd NextTestPlatformUI
+   cd front
    npm run dev  # Starts on :5173
    ```
 
@@ -315,7 +324,7 @@ GEMINI_API_KEY=your_gemini_api_key_here
 
 ### Database Migrations
 
-Migration files in `nextest-platform/migrations/`:
+Migration files in `backend/migrations/`:
 - `001_initial.sql` - Initial schema
 - `002_add_hooks.sql` - Lifecycle hooks
 - `003_add_workflow_integration.sql` - Workflow tables
@@ -334,7 +343,7 @@ sqlite3 data/test_management.db < migrations/004_add_environment_management.sql
 
 ### Unit Tests
 ```bash
-cd nextest-platform
+cd backend
 go test ./...                    # All tests
 go test ./internal/workflow/...  # Specific package
 ```
@@ -427,17 +436,25 @@ All repository and service methods accept `context.Context` for:
 ## Documentation References
 
 **Backend**:
-- `nextest-platform/README.md` - Quick start guide
-- `nextest-platform/PROJECT_SUMMARY.md` - Feature overview
-- `nextest-platform/QUICKSTART.md` - 1-minute setup
-- `nextest-platform/docs/DATABASE_DESIGN.md` - Complete schema
-- `nextest-platform/docs/API_DOCUMENTATION.md` - API reference
-- `nextest-platform/WEBSOCKET_ARCHITECTURE.md` - WebSocket design
-- `nextest-platform/DEPLOYMENT.md` - Deployment guide
+- `docs/1-specs/database/schema.md` - Complete database schema
+- `docs/1-specs/api/v2-documentation.md` - API reference
+- `docs/1-specs/backend/websocket-architecture.md` - WebSocket design
+- `docs/3-guides/development/backend-implementation.md` - Backend guide
+- `docs/3-guides/deployment/` - Deployment guides
 
 **Frontend**:
-- `NextTestPlatformUI/README.md` - Setup instructions
-- `NextTestPlatformUI/docs/BUSINESS_WIKI.md` - Business context
+- `front/README.md` - Setup instructions (if exists)
+- `docs/5-wiki/components/` - Component documentation
+
+**Business Context**:
+- `docs/5-wiki/testcase/overview.md` - Test case module
+- `docs/5-wiki/workflow/overview.md` - Workflow module
+- `docs/5-wiki/tenant/overview.md` - Multi-tenant system
+- `docs/5-wiki/glossary.md` - Unified terminology
+
+**Project Planning**:
+- `docs/4-planning/active/` - Current active plans
+- `docs/4-planning/backlog/roadmap.md` - Future roadmap
 
 ## Performance Considerations
 
@@ -590,7 +607,8 @@ This project uses a **seven-layer documentation architecture** in the `docs/` di
 - `docs/3-guides/deployment/port-configuration.md` - Port configuration
 
 **Frontend**:
-- `NextTestPlatformUI/README.md` - Setup instructions
+- `front/README.md` - Setup instructions (if exists)
+- `docs/5-wiki/components/` - Component documentation
 
 **Business Context**:
 - `docs/5-wiki/testcase/overview.md` - Test case module
