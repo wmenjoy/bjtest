@@ -3,6 +3,8 @@ package service
 import (
 	"errors"
 	"fmt"
+
+	apierrors "test-management-service/internal/errors"
 	"test-management-service/internal/models"
 	"test-management-service/internal/repository"
 )
@@ -118,7 +120,7 @@ func (s *projectService) UpdateProject(projectID string, req *UpdateProjectReque
 		return nil, fmt.Errorf("failed to find project: %w", err)
 	}
 	if project == nil {
-		return nil, errors.New("project not found")
+		return nil, fmt.Errorf("project not found: %w", apierrors.ErrNotFound)
 	}
 
 	// Update fields

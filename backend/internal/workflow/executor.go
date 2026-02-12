@@ -647,7 +647,17 @@ func (e *WorkflowExecutorImpl) executeStep(ctx *ExecutionContext, step *Workflow
 			e.extractOutputsFromTemplate(result, outputDefinitions, step.Outputs, ctx, step.ID)
 		} else if step.Output != nil {
 			// Mode 2: Extract from step output mappings (legacy)
+			outputJSON, marshalErr := json.Marshal(result.Output)
 			for varName, outputPath := range step.Output {
+				if marshalErr == nil {
+					extracted := gjson.GetBytes(outputJSON, outputPath)
+					if extracted.Exists() {
+						oldValue := ctx.Variables[varName]
+						ctx.Variables[varName] = extracted.Value()
+						ctx.VarTracker.Track(step.ID, varName, oldValue, extracted.Value(), "update")
+						continue
+					}
+				}
 				if value, exists := result.Output[outputPath]; exists {
 					oldValue := ctx.Variables[varName]
 					ctx.Variables[varName] = value
@@ -1259,4 +1269,3 @@ func (a *AssertActionWrapper) Execute(ctx *ActionContext) (*ActionResult, error)
 func (a *AssertActionWrapper) Validate() error {
 	return nil
 }
-

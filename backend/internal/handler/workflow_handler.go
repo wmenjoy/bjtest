@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
+	apierrors "test-management-service/internal/errors"
 	"test-management-service/internal/middleware"
 	"test-management-service/internal/service"
 
@@ -76,6 +78,10 @@ func (h *WorkflowHandler) UpdateWorkflow(c *gin.Context) {
 
 	workflow, err := h.service.UpdateWorkflow(c.Request.Context(), workflowID, tenantID, projectID, &req)
 	if err != nil {
+		if errors.Is(err, apierrors.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "workflow not found"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

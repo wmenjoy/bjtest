@@ -31,6 +31,7 @@ export const Charts: React.FC<ChartsProps> = ({ pieData, barData, COLORS }) => {
                   paddingAngle={5}
                   dataKey="value"
                   stroke="none"
+                  isAnimationActive={false}
                 >
                   {pieData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -58,8 +59,8 @@ export const Charts: React.FC<ChartsProps> = ({ pieData, barData, COLORS }) => {
                     cursor={{fill: '#f8fafc'}} 
                     contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}}
                 />
-                <Bar dataKey="passed" name="Passed" fill="#10b981" radius={[4, 4, 0, 0]} stackId="a" />
-                <Bar dataKey="failed" name="Failed" fill="#ef4444" radius={[4, 4, 0, 0]} stackId="a" />
+                <Bar dataKey="passed" name="Passed" fill="#10b981" radius={[4, 4, 0, 0]} stackId="a" isAnimationActive={false} />
+                <Bar dataKey="failed" name="Failed" fill="#ef4444" radius={[4, 4, 0, 0]} stackId="a" isAnimationActive={false} />
               </BarChart>
             </ResponsiveContainer>
           </div>

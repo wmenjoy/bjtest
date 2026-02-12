@@ -2,9 +2,11 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
+	apierrors "test-management-service/internal/errors"
 	"test-management-service/internal/models"
 	"test-management-service/internal/repository"
 	"test-management-service/internal/workflow"
@@ -106,7 +108,10 @@ func (s *workflowService) CreateWorkflow(ctx context.Context, tenantID, projectI
 func (s *workflowService) UpdateWorkflow(ctx context.Context, workflowID, tenantID, projectID string, req *UpdateWorkflowRequest) (*models.Workflow, error) {
 	wf, err := s.workflowRepo.GetWorkflowWithTenant(ctx, workflowID, tenantID, projectID)
 	if err != nil {
-		return nil, fmt.Errorf("workflow not found: %w", err)
+		if errors.Is(err, apierrors.ErrNotFound) {
+			return nil, fmt.Errorf("workflow not found: %w", apierrors.ErrNotFound)
+		}
+		return nil, fmt.Errorf("failed to get workflow: %w", err)
 	}
 
 	if req.Name != "" {

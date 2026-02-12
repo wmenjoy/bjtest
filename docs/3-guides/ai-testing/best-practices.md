@@ -1,7 +1,8 @@
 # AI 测试生成最佳实践指南
 
-> 版本: 1.0.0
+> 版本: 2.0.0
 > 创建日期: 2025-12-07
+> 最后更新: 2025-12-08
 > 适用对象: 开发人员、测试工程师、产品经理
 
 ## 1. 概述
@@ -730,6 +731,398 @@ TEST(ParserTest, NoThrowOnValidInput) {
     Parser parser;
     EXPECT_NO_THROW(parser.Parse("valid input"));
 }
+```
+
+### 5.5 Python 测试最佳实践
+
+```python
+# 1. 使用 pytest 特性
+import pytest
+from unittest.mock import Mock, MagicMock, patch
+
+class TestUserService:
+    def test_create_user_success(self):
+        # Arrange
+        mock_repo = Mock()
+        mock_repo.find_by_email.return_value = None
+        mock_repo.save.return_value = User(id=1, email="test@example.com")
+        service = UserService(mock_repo)
+
+        # Act
+        result = service.create("test@example.com", "password")
+
+        # Assert
+        assert result is not None
+        assert result.email == "test@example.com"
+        mock_repo.save.assert_called_once()
+
+    # 2. 使用 fixtures
+    @pytest.fixture
+    def user_service(self):
+        mock_repo = Mock()
+        return UserService(mock_repo)
+
+    def test_with_fixture(self, user_service):
+        result = user_service.get_user(1)
+        assert result is not None
+
+    # 3. 参数化测试
+    @pytest.mark.parametrize("email,expected", [
+        ("valid@email.com", True),
+        ("invalid", False),
+        ("", False),
+        ("@no-local.com", False),
+    ])
+    def test_email_validation(self, email, expected):
+        assert validate_email(email) == expected
+
+    # 4. 使用 pytest-mock
+    def test_with_mocker(self, mocker):
+        mock_database = mocker.patch('module.database.Database')
+        mock_database.return_value.query.return_value = [{"id": 1}]
+
+        result = get_users()
+
+        assert len(result) == 1
+        mock_database.return_value.query.assert_called_once()
+
+    # 5. 异步测试
+    @pytest.mark.asyncio
+    async def test_async_function(self):
+        result = await async_function()
+        assert result == expected
+
+    # 6. 异常测试
+    def test_raises_exception(self):
+        with pytest.raises(ValueError, match="Invalid input"):
+            validate_input("invalid")
+
+    # 7. 测试类方法
+    @classmethod
+    def setup_class(cls):
+        """类级别 setup，所有测试前执行一次"""
+        cls.shared_resource = create_resource()
+
+    def setup_method(self):
+        """方法级别 setup，每个测试前执行"""
+        self.test_data = {}
+
+    def teardown_method(self):
+        """方法级别 teardown，每个测试后执行"""
+        cleanup()
+```
+
+### 5.6 Rust 测试最佳实践
+
+```rust
+// 1. 基本单元测试
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_calculate_success() {
+        let result = calculate(5, 3);
+        assert_eq!(result, 8);
+    }
+
+    #[test]
+    fn test_calculate_overflow() {
+        let result = calculate(i32::MAX, 1);
+        assert!(result.is_err());
+    }
+
+    // 2. 使用 Result 进行测试
+    #[test]
+    fn test_parse_json() -> Result<(), Box<dyn std::error::Error>> {
+        let data = r#"{"name": "test"}"#;
+        let parsed: User = serde_json::from_str(data)?;
+        assert_eq!(parsed.name, "test");
+        Ok(())
+    }
+
+    // 3. 测试 panic
+    #[test]
+    #[should_panic(expected = "division by zero")]
+    fn test_divide_by_zero() {
+        divide(10, 0);
+    }
+
+    // 4. 忽略测试
+    #[test]
+    #[ignore]
+    fn expensive_test() {
+        // 长时间运行的测试
+    }
+
+    // 5. 使用 mockall 进行 mocking
+    use mockall::predicate::*;
+    use mockall::mock;
+
+    mock! {
+        Database {}
+
+        impl Database {
+            fn find_user(&self, id: u32) -> Option<User>;
+            fn save_user(&mut self, user: User) -> bool;
+        }
+    }
+
+    #[test]
+    fn test_with_mock() {
+        let mut mock_db = MockDatabase::new();
+
+        mock_db
+            .expect_find_user()
+            .with(eq(1))
+            .times(1)
+            .returning(|_| Some(User { id: 1, name: "test".to_string() }));
+
+        let service = UserService::new(mock_db);
+        let result = service.get_user(1);
+
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().name, "test");
+    }
+
+    // 6. 集成测试文档测试
+    /// ```
+    /// use mylib::calculate;
+    /// assert_eq!(calculate(2, 2), 4);
+    /// ```
+    fn documented_function() {}
+
+    // 7. 基准测试 (benches/)
+    #[bench]
+    fn bench_calculate(b: &mut Bencher) {
+        b.iter(|| calculate(100, 200));
+    }
+}
+```
+
+### 5.7 Vue 测试最佳实践
+
+```typescript
+// 1. Vue 组件测试基础
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { mount, flushPromises } from '@vue/test-utils'
+import UserProfile from './UserProfile.vue'
+
+describe('UserProfile.vue', () => {
+    let wrapper: any
+
+    beforeEach(() => {
+        wrapper = mount(UserProfile, {
+            props: {
+                userId: 123
+            }
+        })
+    })
+
+    it('should render user name', async () => {
+        await wrapper.setData({ user: { name: 'John' } })
+        expect(wrapper.text()).toContain('John')
+    })
+
+    // 2. 测试事件
+    it('should emit save event when button clicked', async () => {
+        const button = wrapper.find('[data-testid="save-button"]')
+        await button.trigger('click')
+
+        expect(wrapper.emitted('save')).toBeTruthy()
+        expect(wrapper.emitted('save')[0]).toEqual([{ name: 'John' }])
+    })
+
+    // 3. 测试 props
+    it('should receive userId prop', () => {
+        expect(wrapper.props('userId')).toBe(123)
+    })
+
+    // 4. 测试插槽
+    it('should render slot content', () => {
+        const wrapper = mount(UserProfile, {
+            slots: {
+                default: '<div>Custom content</div>'
+            }
+        })
+        expect(wrapper.html()).toContain('Custom content')
+    })
+
+    // 5. 测试 Vuex/Pinia store
+    it('should dispatch action', async () => {
+        const mockStore = {
+            dispatch: vi.fn()
+        }
+
+        const wrapper = mount(UserProfile, {
+            global: {
+                mocks: {
+                    $store: mockStore
+                }
+            }
+        })
+
+        await wrapper.vm.saveUser()
+        expect(mockStore.dispatch).toHaveBeenCalledWith('user/save', { name: 'John' })
+    })
+
+    // 6. 测试异步数据加载
+    it('should load user data on mount', async () => {
+        const mockUserService = {
+            getUser: vi.fn().mockResolvedValue({ id: 123, name: 'John' })
+        }
+
+        const wrapper = mount(UserProfile, {
+            props: { userId: 123 },
+            global: {
+                provide: {
+                    userService: mockUserService
+                }
+            }
+        })
+
+        await flushPromises()
+
+        expect(wrapper.vm.user.name).toBe('John')
+        expect(mockUserService.getUser).toHaveBeenCalledWith(123)
+    })
+
+    // 7. 测试 computed properties
+    it('should compute full name', async () => {
+        await wrapper.setData({
+            user: { firstName: 'John', lastName: 'Doe' }
+        })
+        expect(wrapper.vm.fullName).toBe('John Doe')
+    })
+
+    // 8. 测试条件渲染
+    it('should show loading state', async () => {
+        await wrapper.setData({ loading: true })
+        expect(wrapper.find('[data-testid="loading"]').exists()).toBe(true)
+
+        await wrapper.setData({ loading: false })
+        expect(wrapper.find('[data-testid="loading"]').exists()).toBe(false)
+    })
+})
+```
+
+### 5.8 React 测试最佳实践
+
+```typescript
+// 1. React 组件测试基础
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { UserProfile } from './UserProfile'
+
+describe('UserProfile', () => {
+    // 2. 测试渲染
+    it('should render user name', async () => {
+        const mockUser = { id: 123, name: 'John Doe' }
+
+        render(<UserProfile user={mockUser} />)
+
+        expect(screen.getByText('John Doe')).toBeInTheDocument()
+    })
+
+    // 3. 测试用户交互
+    it('should call onSave when save button clicked', async () => {
+        const user = userEvent.setup()
+        const mockOnSave = jest.fn()
+
+        render(<UserProfile user={{}} onSave={mockOnSave} />)
+
+        const saveButton = screen.getByRole('button', { name: /save/i })
+        await user.click(saveButton)
+
+        expect(mockOnSave).toHaveBeenCalledTimes(1)
+    })
+
+    // 4. 测试表单输入
+    it('should update input value', async () => {
+        const user = userEvent.setup()
+
+        render(<UserProfile />)
+
+        const nameInput = screen.getByLabelText(/name/i)
+        await user.type(nameInput, 'John')
+
+        expect(nameInput).toHaveValue('John')
+    })
+
+    // 5. 测试异步操作
+    it('should load and display user data', async () => {
+        const mockUserService = {
+            getUser: jest.fn().mockResolvedValue({ id: 123, name: 'John' })
+        }
+
+        render(<UserProfile userId={123} userService={mockUserService} />)
+
+        await waitFor(() => {
+            expect(screen.getByText('John')).toBeInTheDocument()
+        })
+
+        expect(mockUserService.getUser).toHaveBeenCalledWith(123)
+    })
+
+    // 6. 测试错误状态
+    it('should display error message when loading fails', async () => {
+        const mockUserService = {
+            getUser: jest.fn().mockRejectedValue(new Error('Not found'))
+        }
+
+        render(<UserProfile userId={999} userService={mockUserService} />)
+
+        await waitFor(() => {
+            expect(screen.getByText(/error/i)).toBeInTheDocument()
+        })
+    })
+
+    // 7. 测试条件渲染
+    it('should show loading spinner while loading', () => {
+        render(<UserProfile loading={true} />)
+        expect(screen.getByTestId('loading-spinner')).toBeInTheDocument()
+
+        render(<UserProfile loading={false} user={{}} />)
+        expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument()
+    })
+
+    // 8. 测试 React Hooks
+    it('should update state with useState', async () => {
+        const user = userEvent.setup()
+        const { rerender } = render(<Counter />)
+
+        const button = screen.getByRole('button', { name: /increment/i })
+        await user.click(button)
+
+        expect(screen.getByText('Count: 1')).toBeInTheDocument()
+    })
+
+    // 9. 测试 Context
+    it('should access theme from context', () => {
+        render(
+            <ThemeContext.Provider value={{ theme: 'dark' }}>
+                <ThemedComponent />
+            </ThemeContext.Provider>
+        )
+
+        expect(screen.getByTestId('theme')).toHaveTextContent('dark')
+    })
+
+    // 10. 测试自定义 Hooks
+    import { renderHook, act } from '@testing-library/react'
+
+    it('should use custom hook', () => {
+        const { result } = renderHook(() => useCounter())
+
+        expect(result.current.count).toBe(0)
+
+        act(() => {
+            result.current.increment()
+        })
+
+        expect(result.current.count).toBe(1)
+    })
+})
 ```
 
 ---

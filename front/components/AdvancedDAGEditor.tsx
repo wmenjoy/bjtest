@@ -295,12 +295,19 @@ export const AdvancedDAGEditor: React.FC<AdvancedDAGEditorProps> = ({
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
 
-  // Update nodes when steps change
+  // Update nodes when steps change (debounced to reduce layout thrash)
   useEffect(() => {
-    const { nodes, edges } = convertStepsToGraph(steps);
-    const layouted = getLayoutedElements(nodes, edges, layoutDirection);
-    setNodes(layouted.nodes);
-    setEdges(layouted.edges);
+    let timer: any = null;
+    const run = () => {
+      const { nodes, edges } = convertStepsToGraph(steps);
+      const layouted = getLayoutedElements(nodes, edges, layoutDirection);
+      setNodes(layouted.nodes);
+      setEdges(layouted.edges);
+    };
+    timer = setTimeout(run, 100);
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
   }, [steps, layoutDirection, setNodes, setEdges]);
 
   // Handle new connection (dependency)

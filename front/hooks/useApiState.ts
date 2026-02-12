@@ -17,6 +17,7 @@ import {
   projectApi,
   userApi,
   roleApi,
+  setTenantContext,
   testCaseFromBackend,
   testCaseToBackend,
   groupFromBackend,
@@ -259,6 +260,14 @@ export const useApiState = () => {
   useEffect(() => {
     loadOrganizations();
   }, [loadOrganizations]);
+
+  // Sync tenant/project context for API calls
+  useEffect(() => {
+    setTenantContext({
+      tenantId: activeOrgId || 'default',
+      projectId: activeProjectId || 'default',
+    });
+  }, [activeOrgId, activeProjectId]);
 
   // Load projects when org changes
   useEffect(() => {

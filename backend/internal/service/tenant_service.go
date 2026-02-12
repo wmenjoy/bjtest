@@ -3,6 +3,8 @@ package service
 import (
 	"errors"
 	"fmt"
+
+	apierrors "test-management-service/internal/errors"
 	"test-management-service/internal/models"
 	"test-management-service/internal/repository"
 )
@@ -110,7 +112,7 @@ func (s *tenantService) UpdateTenant(tenantID string, req *UpdateTenantRequest) 
 		return nil, fmt.Errorf("failed to find tenant: %w", err)
 	}
 	if tenant == nil {
-		return nil, errors.New("tenant not found")
+		return nil, fmt.Errorf("tenant not found: %w", apierrors.ErrNotFound)
 	}
 
 	// Update fields

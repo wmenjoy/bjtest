@@ -2,8 +2,12 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
+
+	apierrors "test-management-service/internal/errors"
 	"test-management-service/internal/models"
+
 	"gorm.io/gorm"
 )
 
@@ -37,8 +41,8 @@ func (r *workflowRepository) GetWorkflow(workflowID string) (*models.Workflow, e
 
 	result := r.db.Where("workflow_id = ? AND deleted_at IS NULL", workflowID).First(&workflow)
 	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
-			return nil, fmt.Errorf("workflow not found: %s", workflowID)
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("workflow not found: %w", apierrors.ErrNotFound)
 		}
 		return nil, fmt.Errorf("failed to query workflow: %w", result.Error)
 	}
@@ -56,8 +60,8 @@ func (r *workflowRepository) GetWorkflowWithTenant(ctx context.Context, workflow
 		First(&workflow)
 
 	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
-			return nil, fmt.Errorf("workflow not found: %s", workflowID)
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("workflow not found: %w", apierrors.ErrNotFound)
 		}
 		return nil, fmt.Errorf("failed to query workflow: %w", result.Error)
 	}
@@ -193,4 +197,3 @@ func (r *workflowRepository) DeleteWorkflowWithTenant(ctx context.Context, workf
 
 	return nil
 }
-

@@ -126,6 +126,10 @@ func (h *EnvironmentHandler) UpdateEnvironment(c *gin.Context) {
 
 	env, err := h.envService.UpdateEnvironment(c.Request.Context(), envID, tenantID, projectID, &req)
 	if err != nil {
+		if errors.Is(err, apierrors.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "environment not found"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

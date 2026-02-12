@@ -5,7 +5,7 @@ backend/*.exe
 backend/*.dll
 backend/*.so
 backend/*.dylib
-
+superpowers/
 # Go build cache
 backend/.cache/
 backend/vendor/

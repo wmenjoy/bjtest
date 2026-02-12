@@ -114,12 +114,13 @@ export const ConnectionLine: React.FC<ConnectionLineProps> = ({
   const pathRef = useRef<SVGPathElement>(null);
   const [pathLength, setPathLength] = useState(0);
 
-  // Calculate path length for animation
+  // Calculate path length for animation only when needed
   useEffect(() => {
+    if (!(isActive || isHighlighted || isHovering)) return;
     if (pathRef.current) {
       setPathLength(pathRef.current.getTotalLength());
     }
-  }, [startPos, endPos]);
+  }, [startPos, endPos, isActive, isHighlighted, isHovering]);
 
   const handleMouseEnter = () => {
     setIsHovering(true);

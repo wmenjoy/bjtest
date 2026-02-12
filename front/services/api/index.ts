@@ -8,6 +8,8 @@ export {
   apiClientV2,
   API_BASE_URL,
   API_V2_URL,
+  setTenantContext,
+  getTenantContext,
   ApiError,
   ValidationError,
   NotFoundError,

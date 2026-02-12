@@ -320,17 +320,30 @@ export const DataFlowDiagram: React.FC<DataFlowDiagramProps> = ({
   const [highlightMode, setHighlightMode] = useState<'all' | 'inputs' | 'outputs' | 'none'>('all');
   const [zoom, setZoom] = useState(1);
 
-  // Calculate container width on mount and resize
+  // Calculate container width using ResizeObserver and rAF batching
   useEffect(() => {
-    const updateWidth = () => {
-      if (containerRef.current) {
-        setContainerWidth(containerRef.current.offsetWidth);
+    if (!containerRef.current) return;
+    let rafId = 0;
+    let lastWidth = -1;
+    const applyWidth = (w: number) => {
+      if (w !== lastWidth) {
+        lastWidth = w;
+        setContainerWidth(w);
       }
     };
-
-    updateWidth();
-    window.addEventListener('resize', updateWidth);
-    return () => window.removeEventListener('resize', updateWidth);
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      const w = Math.round(entry.contentRect.width);
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => applyWidth(w));
+    });
+    observer.observe(containerRef.current);
+    // initial measure
+    applyWidth(Math.round(containerRef.current.offsetWidth));
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      observer.disconnect();
+    };
   }, []);
 
   // Calculate layout

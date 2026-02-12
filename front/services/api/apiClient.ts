@@ -6,6 +6,28 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8090/api';
 const API_V2_URL = import.meta.env.VITE_API_V2_URL || 'http://localhost:8090/api/v2';
 
+type TenantContext = {
+  tenantId?: string;
+  projectId?: string;
+};
+
+let tenantContext: TenantContext = {};
+
+export function setTenantContext(next: TenantContext) {
+  tenantContext = { ...tenantContext, ...next };
+}
+
+export function getTenantContext(): TenantContext {
+  return { ...tenantContext };
+}
+
+function getTenantHeaders() {
+  const headers: Record<string, string> = {};
+  if (tenantContext.tenantId) headers['X-Tenant-ID'] = tenantContext.tenantId;
+  if (tenantContext.projectId) headers['X-Project-ID'] = tenantContext.projectId;
+  return headers;
+}
+
 // ===== 错误类型 =====
 
 export class ApiError extends Error {
@@ -145,6 +167,7 @@ export const apiClient = {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
+        ...getTenantHeaders(),
       },
     });
     return handleResponse<T>(response);
@@ -156,6 +179,7 @@ export const apiClient = {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        ...getTenantHeaders(),
       },
       body: data ? JSON.stringify(data) : undefined,
     });
@@ -168,6 +192,7 @@ export const apiClient = {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        ...getTenantHeaders(),
       },
       body: JSON.stringify(data),
     });
@@ -179,6 +204,7 @@ export const apiClient = {
       method: 'DELETE',
       headers: {
         'Accept': 'application/json',
+        ...getTenantHeaders(),
       },
     });
     return handleResponse<T>(response);

@@ -98,6 +98,10 @@ func (h *TestHandler) UpdateTestCase(c *gin.Context) {
 
 	testCase, err := h.service.UpdateTestCase(c.Request.Context(), testID, tenantID, projectID, &req)
 	if err != nil {
+		if errors.Is(err, apierrors.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "test case not found"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -220,6 +224,10 @@ func (h *TestHandler) UpdateTestGroup(c *gin.Context) {
 
 	group, err := h.service.UpdateTestGroup(c.Request.Context(), groupID, tenantID, projectID, &req)
 	if err != nil {
+		if errors.Is(err, apierrors.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "test group not found"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

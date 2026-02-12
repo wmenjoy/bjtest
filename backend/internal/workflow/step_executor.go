@@ -12,16 +12,17 @@ import (
 	"test-management-service/internal/testcase"
 	ws "test-management-service/internal/websocket"
 
+	"github.com/tidwall/gjson"
 	"gorm.io/gorm"
 )
 
 // TestStepExecutor executes TestStep with full control flow support (loops, branches, children)
 type TestStepExecutor struct {
-	db               *gorm.DB
-	hub              *ws.Hub
-	testCaseRepo     TestCaseRepository
-	unifiedExecutor  *testcase.UnifiedTestExecutor
-	actionRegistry   *ActionRegistry
+	db              *gorm.DB
+	hub             *ws.Hub
+	testCaseRepo    TestCaseRepository
+	unifiedExecutor *testcase.UnifiedTestExecutor
+	actionRegistry  *ActionRegistry
 }
 
 // TestStepExecutionContext contains execution context for TestStep execution
@@ -34,7 +35,7 @@ type TestStepExecutionContext struct {
 	Evaluator   *expression.Evaluator
 
 	// Parent context for cancellation
-	Ctx         context.Context
+	Ctx context.Context
 }
 
 // NewTestStepExecutor creates a new TestStepExecutor
@@ -45,11 +46,11 @@ func NewTestStepExecutor(
 	unifiedExecutor *testcase.UnifiedTestExecutor,
 ) *TestStepExecutor {
 	return &TestStepExecutor{
-		db:               db,
-		hub:              hub,
-		testCaseRepo:     testCaseRepo,
-		unifiedExecutor:  unifiedExecutor,
-		actionRegistry:   NewActionRegistry(),
+		db:              db,
+		hub:             hub,
+		testCaseRepo:    testCaseRepo,
+		unifiedExecutor: unifiedExecutor,
+		actionRegistry:  NewActionRegistry(),
 	}
 }
 
@@ -1092,7 +1093,17 @@ func (e *TestStepExecutor) mapOutputs(ctx *TestStepExecutionContext, step *model
 		return
 	}
 
+	outputJSON, marshalErr := json.Marshal(execution.Outputs)
 	for stepOutput, targetVar := range step.Outputs {
+		if marshalErr == nil {
+			extracted := gjson.GetBytes(outputJSON, stepOutput)
+			if extracted.Exists() {
+				oldValue := ctx.Variables[targetVar]
+				ctx.Variables[targetVar] = extracted.Value()
+				ctx.VarTracker.Track(step.ID, targetVar, oldValue, extracted.Value(), "update")
+				continue
+			}
+		}
 		if value, exists := execution.Outputs[stepOutput]; exists {
 			oldValue := ctx.Variables[targetVar]
 			ctx.Variables[targetVar] = value

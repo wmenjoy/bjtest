@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	apierrors "test-management-service/internal/errors"
 	"test-management-service/internal/models"
 	"test-management-service/internal/repository"
 	"test-management-service/internal/testcase"
@@ -84,21 +85,21 @@ func (s *testService) SetWorkflowCaseRepo(repo *repository.WorkflowTestCaseRepos
 // ===== Request/Response DTOs =====
 
 type CreateTestCaseRequest struct {
-	TestID        string                 `json:"testId" binding:"required"`
-	GroupID       string                 `json:"groupId" binding:"required"`
-	Name          string                 `json:"name" binding:"required"`
-	Type          string                 `json:"type" binding:"required"` // Now includes "workflow"
-	Priority      string                 `json:"priority"`
-	Status        string                 `json:"status"`
-	Objective     string                 `json:"objective"`
-	Timeout       int                    `json:"timeout"`
+	TestID    string `json:"testId" binding:"required"`
+	GroupID   string `json:"groupId" binding:"required"`
+	Name      string `json:"name" binding:"required"`
+	Type      string `json:"type" binding:"required"` // Now includes "workflow"
+	Priority  string `json:"priority"`
+	Status    string `json:"status"`
+	Objective string `json:"objective"`
+	Timeout   int    `json:"timeout"`
 
 	// Workflow integration (NEW)
-	WorkflowID    string                 `json:"workflowId,omitempty"`    // Mode 1: Reference workflow
-	WorkflowDef   map[string]interface{} `json:"workflowDef,omitempty"`   // Mode 2: Embedded workflow
+	WorkflowID  string                 `json:"workflowId,omitempty"`  // Mode 1: Reference workflow
+	WorkflowDef map[string]interface{} `json:"workflowDef,omitempty"` // Mode 2: Embedded workflow
 
 	// Test steps with control flow support (NEW)
-	Steps         []interface{}          `json:"steps"`                   // Array of TestStep with loop/branch/children support
+	Steps []interface{} `json:"steps"` // Array of TestStep with loop/branch/children support
 
 	// Existing fields
 	HTTP          map[string]interface{} `json:"http"`
@@ -111,18 +112,18 @@ type CreateTestCaseRequest struct {
 }
 
 type UpdateTestCaseRequest struct {
-	Name          string                 `json:"name"`
-	Priority      string                 `json:"priority"`
-	Status        string                 `json:"status"`
-	Objective     string                 `json:"objective"`
-	Timeout       int                    `json:"timeout"`
+	Name      string `json:"name"`
+	Priority  string `json:"priority"`
+	Status    string `json:"status"`
+	Objective string `json:"objective"`
+	Timeout   int    `json:"timeout"`
 
 	// Workflow integration (NEW)
-	WorkflowID    string                 `json:"workflowId,omitempty"`
-	WorkflowDef   map[string]interface{} `json:"workflowDef,omitempty"`
+	WorkflowID  string                 `json:"workflowId,omitempty"`
+	WorkflowDef map[string]interface{} `json:"workflowDef,omitempty"`
 
 	// Test steps with control flow support (NEW)
-	Steps         []interface{}          `json:"steps"`                   // Array of TestStep with loop/branch/children support
+	Steps []interface{} `json:"steps"` // Array of TestStep with loop/branch/children support
 
 	HTTP          map[string]interface{} `json:"http"`
 	Command       map[string]interface{} `json:"command"`
@@ -220,7 +221,7 @@ func (s *testService) UpdateTestCase(ctx context.Context, testID, tenantID, proj
 		return nil, fmt.Errorf("failed to find test case: %w", err)
 	}
 	if tc == nil {
-		return nil, fmt.Errorf("test case not found: %s", testID)
+		return nil, fmt.Errorf("test case not found: %w", apierrors.ErrNotFound)
 	}
 
 	if req.Name != "" {
@@ -318,7 +319,7 @@ func (s *testService) UpdateTestGroup(ctx context.Context, groupID, tenantID, pr
 		return nil, fmt.Errorf("failed to find test group: %w", err)
 	}
 	if group == nil {
-		return nil, fmt.Errorf("test group not found: %s", groupID)
+		return nil, fmt.Errorf("test group not found: %w", apierrors.ErrNotFound)
 	}
 
 	if req.Name != "" {

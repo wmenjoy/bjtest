@@ -53,6 +53,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
                             strokeWidth={2}
                             dot={{ fill: color, r: 4 }}
                             activeDot={{ r: 6 }}
+                            isAnimationActive={false}
                         />
                     ) : (
                         <Area
@@ -61,6 +62,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
                             stroke={color}
                             fill={color}
                             fillOpacity={0.3}
+                            isAnimationActive={false}
                         />
                     )}
                 </ChartComponent>

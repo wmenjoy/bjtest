@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 
+	apierrors "test-management-service/internal/errors"
 	"test-management-service/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -126,6 +128,10 @@ func (h *TenantHandler) UpdateTenant(c *gin.Context) {
 
 	tenant, err := h.tenantService.UpdateTenant(tenantID, &req)
 	if err != nil {
+		if errors.Is(err, apierrors.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "tenant not found"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

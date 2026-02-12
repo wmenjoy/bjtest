@@ -17,6 +17,7 @@ import { useApiState } from './hooks/useApiState';
 import { usePermissions } from './hooks/usePermissions';
 import { LoadingState, ErrorState } from './components/ui/LoadingState';
 import { ShieldAlert } from 'lucide-react';
+import PerfStats from './components/ui/PerfStats';
 
 const AccessDenied = () => (
   <div className="h-full flex flex-col items-center justify-center text-slate-400">
@@ -105,6 +106,7 @@ const App: React.FC = () => {
       />
 
       <main className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50 text-slate-900 transition-colors duration-300">
+        {import.meta.env.DEV && <PerfStats />}
         <div className="flex-1 overflow-hidden relative">
             {currentTab === 'dashboard' && (
                 hasPermission('VIEW_DASHBOARD') ? <div className="h-full overflow-y-auto p-8"><Dashboard runs={activeProjectRuns} /></div> : <AccessDenied />

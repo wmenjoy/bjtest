@@ -2,6 +2,8 @@
  * WebSocket Client - 工作流实时监控
  */
 
+import { getTenantContext } from './apiClient';
+
 const WS_BASE_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8090/api';
 
 // ===== 消息类型 =====
@@ -75,7 +77,12 @@ export class WorkflowStreamClient {
   private doConnect(): void {
     if (!this.runId) return;
 
-    const url = `${WS_BASE_URL}/workflows/runs/${this.runId}/stream`;
+    const { tenantId, projectId } = getTenantContext();
+    const query = new URLSearchParams();
+    if (tenantId) query.set('tenant_id', tenantId);
+    if (projectId) query.set('project_id', projectId);
+    const suffix = query.toString();
+    const url = `${WS_BASE_URL}/workflows/runs/${this.runId}/stream${suffix ? `?${suffix}` : ''}`;
     this.ws = new WebSocket(url);
 
     this.ws.onopen = () => {

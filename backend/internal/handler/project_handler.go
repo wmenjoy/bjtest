@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 
+	apierrors "test-management-service/internal/errors"
 	"test-management-service/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -145,6 +147,10 @@ func (h *ProjectHandler) UpdateProject(c *gin.Context) {
 
 	project, err := h.projectService.UpdateProject(projectID, &req)
 	if err != nil {
+		if errors.Is(err, apierrors.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "project not found"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

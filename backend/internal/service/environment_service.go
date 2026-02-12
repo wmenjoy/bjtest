@@ -96,7 +96,7 @@ func (s *environmentService) UpdateEnvironment(ctx context.Context, envID, tenan
 		return nil, fmt.Errorf("failed to find environment: %w", err)
 	}
 	if env == nil {
-		return nil, fmt.Errorf("environment not found: %s", envID)
+		return nil, fmt.Errorf("environment not found: %w", apierrors.ErrNotFound)
 	}
 
 	if req.Name != "" {

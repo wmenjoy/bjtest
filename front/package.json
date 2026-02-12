@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "scan": "vite & react-scan http://localhost:8081",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -21,6 +22,8 @@
   "devDependencies": {
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "react-scan": "^0.4.3",
+    "stats.js": "^0.17.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }
